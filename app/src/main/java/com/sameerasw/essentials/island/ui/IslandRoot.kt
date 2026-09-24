@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
@@ -149,6 +150,10 @@ fun IslandRoot(
     val outgoingMotion = remember { Animatable(0f) }
     val contentShiftPx = with(density) { 10.dp.toPx() }
     val collapse = remember { Animatable(0f) }
+    // Hidden: the width shrinks to a circle first, then the circle shrinks to nothing, so it never turns oval.
+    val squash = remember { Animatable(0f) }
+    val squashPx = minSurfaceHeight
+    val squashStarted = remember { BooleanArray(1) }
     val dismissOffset = remember { Animatable(0f) }
     var target by remember { mutableStateOf(IntSize.Zero) }
     var compactSize by remember { mutableStateOf(IntSize.Zero) }
@@ -181,7 +186,11 @@ fun IslandRoot(
     }
 
     LaunchedEffect(key) {
-        if (stage != IslandStage.Hidden) visible = true
+        if (stage != IslandStage.Hidden) {
+            visible = true
+            squashStarted[0] = false
+            squash.snapTo(0f)
+        }
         if (stage != IslandStage.Compact) {
             launch { jelly.press.animateTo(0f, CompactJellyState.JellySpring) }
             launch { jelly.releaseStretch(0f, 0f) }
@@ -313,7 +322,7 @@ fun IslandRoot(
                     val dx = spec.growDirection * (p.width - cameraSlotPx) / 2
                     layout(p.width, p.height) { p.place(dx, 0) }
                 }
-                .offset { IntOffset(0, -edgeShift.floatValue.roundToInt()) }
+                .offset { IntOffset(0, (squashPx / 2f * squash.value - edgeShift.floatValue).roundToInt()) }
                 .compactJelly(jelly, jellyRangePx)
                 .graphicsLayer {
                     alpha = if (visible) 1f else 0f
@@ -330,13 +339,25 @@ fun IslandRoot(
                     val child = measurable.measure(constraints)
                     val t = collapse.value.coerceIn(0f, 1f)
                     val end = when {
-                        currentState.arrangement.visibleItems.isEmpty() -> IntSize(minSurfaceWidth, minSurfaceHeight)
+                        currentState.arrangement.visibleItems.isEmpty() -> IntSize(minSurfaceHeight, minSurfaceHeight)
                         compactSize != IntSize.Zero -> compactSize
                         else -> fallbackCompact
                     }
                     // Never smaller than the camera, whatever a spring or fling does.
-                    val w = (if (t > 0f) lerp(child.width, end.width, t) else child.width).coerceAtLeast(minSurfaceWidth)
-                    val h = (if (t > 0f) lerp(child.height, end.height, t) else child.height).coerceAtLeast(minSurfaceHeight)
+                    val preW = (if (t > 0f) lerp(child.width, end.width, t) else child.width).coerceAtLeast(minSurfaceWidth)
+                    if (currentState.stage == IslandStage.Hidden && !squashStarted[0] && preW <= minSurfaceHeight) {
+                        squashStarted[0] = true
+                        scope.launch {
+                            squash.animateTo(1f, tween(IslandMotion.COLLAPSE_MS, easing = LinearEasing))
+                            if (currentState.stage == IslandStage.Hidden) visible = false
+                        }
+                    }
+                    val w = lerp(preW, 0, squash.value)
+                    val h = lerp(
+                        (if (t > 0f) lerp(child.height, end.height, t) else child.height).coerceAtLeast(minSurfaceHeight),
+                        0,
+                        squash.value,
+                    )
                     val range = (expandedHeight[0] - minSurfaceHeight).toFloat()
                     val p = if (range > 0f) ((h - minSurfaceHeight) / range).coerceIn(0f, 1f) else 0f
                     edgeShift.floatValue = outsetPx * p
@@ -351,7 +372,6 @@ fun IslandRoot(
                     },
                     alignment = Alignment.TopCenter,
                     finishedListener = { _, _ ->
-                        if (currentState.stage == IslandStage.Hidden) visible = false
                         if (dragCommitted && currentState.stage != IslandStage.Expanded && currentState.stage != IslandStage.Line) {
                             dragCommitted = false
                             scope.launch { collapse.snapTo(0f) }
@@ -773,7 +793,7 @@ private fun StageContent(
 ) {
     val a = if (interactive) actions else NoActions
     when (stage) {
-        IslandStage.Hidden -> Spacer(Modifier.size(spec.cameraDiameter, spec.compactHeight))
+        IslandStage.Hidden -> Spacer(Modifier.size(spec.compactHeight, spec.compactHeight))
         IslandStage.Compact -> {
             val feedback by IslandSlideFeedback.state.collectAsState()
             val takeover = feedback
