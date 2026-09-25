@@ -236,15 +236,21 @@ class IslandCoordinator(
         mainHandler.post { controller.collapse() }
     }
 
-    fun onForegroundPackage(packageName: String) {
-        if (foregroundPackage == packageName) return
+    private var pendingPackage: String? = null
+    private val applyForegroundPackage = Runnable {
+        val packageName = pendingPackage ?: return@Runnable
+        if (isTransientPackage(packageName) || foregroundPackage == packageName) return@Runnable
         foregroundPackage = packageName
         applyOwnerAppHiding()
-        when {
-            packageName in launcherPackages -> onLauncher = true
-            !isTransientPackage(packageName) -> onLauncher = false
-        }
+        onLauncher = packageName in launcherPackages
         applyLauncherOnly()
+    }
+
+    fun onForegroundPackage(packageName: String) {
+        if (pendingPackage == packageName) return
+        pendingPackage = packageName
+        mainHandler.removeCallbacks(applyForegroundPackage)
+        mainHandler.postDelayed(applyForegroundPackage, SETTLE_MS)
     }
 
     private var onLauncher = true
@@ -279,17 +285,35 @@ class IslandCoordinator(
         mainHandler.post { plugins.filterIsInstance<ConsciousGatePlugin>().forEach { it.refresh() } }
     }
 
-    fun setFullscreen(fullscreen: Boolean) {
-        if (isFullscreenApp == fullscreen) return
-        isFullscreenApp = fullscreen
+    private var pendingFullscreen = false
+    private val applyFullscreen = Runnable {
+        if (isFullscreenApp == pendingFullscreen) return@Runnable
+        isFullscreenApp = pendingFullscreen
         updateState()
+    }
+
+    fun setFullscreen(fullscreen: Boolean) {
+        mainHandler.post {
+            if (pendingFullscreen == fullscreen) return@post
+            pendingFullscreen = fullscreen
+            mainHandler.removeCallbacks(applyFullscreen)
+            if (isFullscreenApp != fullscreen) mainHandler.postDelayed(applyFullscreen, SETTLE_MS)
+        }
+    }
+
+    private var pendingShadeExpanded = false
+    private val applyShadeExpanded = Runnable {
+        if (isShadeExpanded == pendingShadeExpanded) return@Runnable
+        isShadeExpanded = pendingShadeExpanded
+        if (running) applySuppression()
     }
 
     fun setShadeExpanded(expanded: Boolean) {
         mainHandler.post {
-            if (isShadeExpanded == expanded) return@post
-            isShadeExpanded = expanded
-            if (running) applySuppression()
+            if (pendingShadeExpanded == expanded) return@post
+            pendingShadeExpanded = expanded
+            mainHandler.removeCallbacks(applyShadeExpanded)
+            if (isShadeExpanded != expanded) mainHandler.postDelayed(applyShadeExpanded, SETTLE_MS)
         }
     }
 
@@ -304,6 +328,9 @@ class IslandCoordinator(
     }
 
     fun onDestroy() {
+        mainHandler.removeCallbacks(applyForegroundPackage)
+        mainHandler.removeCallbacks(applyFullscreen)
+        mainHandler.removeCallbacks(applyShadeExpanded)
         settings.unregisterOnSharedPreferenceChangeListener(this)
         try {
             service.unregisterReceiver(screenReceiver)
@@ -497,6 +524,7 @@ class IslandCoordinator(
     }
 
     private companion object {
+        const val SETTLE_MS = 300L
         const val PREVIEW_SOURCE = "preview"
         const val PREVIEW_KEY = "preview.sample"
         val LAUNCHER_ONLY_KEYS = mapOf(
