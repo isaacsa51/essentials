@@ -227,8 +227,8 @@ fun IslandRoot(
             outgoingAlpha.snapTo(1f)
             outgoingMotion.snapTo(0f)
         }
-        // Shrinking content fades in in place, once the outgoing layer is mostly gone, instead of rising from below.
-        contentMotion.snapTo(if (growing) -1f else 0f)
+        // Shrinking content mirrors the outgoing layer: it rises from below while fading in, once that layer is mostly gone.
+        contentMotion.snapTo(if (growing) -1f else 1f)
         contentAlpha.snapTo(0f)
         if (handOver) {
             outgoing = leaving
@@ -657,7 +657,8 @@ fun IslandRoot(
                                 if (surfaceSize.width > 0) (1f - abs(dismissOffset.value) / surfaceSize.width * 0.6f).coerceIn(0f, 1f) else 1f
                             translationX = dismissOffset.value + wiggle.value
                             val m = contentMotion.value - if (previewing) collapse.value.coerceIn(0f, 1f) else 0f
-                            val scale = 1f + contentScaleFor(key.stage) * m
+                            // Only shrink (growing entry, drag preview); rising in from below keeps its size.
+                            val scale = 1f + contentScaleFor(key.stage) * m.coerceAtMost(0f)
                             scaleX = scale
                             scaleY = scale
                             translationY = contentShiftPx * m + edgeCorrection(key.stage)
