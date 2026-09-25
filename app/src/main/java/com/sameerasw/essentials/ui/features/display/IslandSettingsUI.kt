@@ -64,6 +64,7 @@ import com.sameerasw.essentials.ui.features.display.actions.HorizontalSlideModeS
 import com.sameerasw.essentials.ui.features.display.actions.horizontalSlideDescription
 import com.sameerasw.essentials.ui.features.display.sheets.IslandAlarmOptionsBottomSheet
 import com.sameerasw.essentials.ui.features.display.sheets.IslandBriefOptionsBottomSheet
+import com.sameerasw.essentials.ui.features.display.sheets.IslandCallOptionsBottomSheet
 import com.sameerasw.essentials.ui.features.display.sheets.IslandDevicesBatteryBottomSheet
 import com.sameerasw.essentials.ui.features.display.sheets.IslandNotificationOptionsBottomSheet
 import com.sameerasw.essentials.ui.features.display.sheets.IslandTimeBatteryOptionsBottomSheet
@@ -168,6 +169,7 @@ fun IslandSettingsUI(
     var showDevicesBatterySheet by remember { mutableStateOf(false) }
     var showTimeBatteryOptionsSheet by remember { mutableStateOf(false) }
     var showTimerOptionsSheet by remember { mutableStateOf(false) }
+    var showCallOptionsSheet by remember { mutableStateOf(false) }
     var showAlarmOptionsSheet by remember { mutableStateOf(false) }
     var showBriefOptionsSheet by remember { mutableStateOf(highlightSetting == "island_brief_show_alarm") }
     var showNotificationOptionsSheet by remember {
@@ -238,6 +240,7 @@ fun IslandSettingsUI(
         val previewSettings = remember { SettingsRepository(context) }
         var previewRing by remember { mutableStateOf(false) }
         var previewStage by remember { mutableStateOf(SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO) }
+        var showWhen by remember { mutableStateOf(previewSettings.getIslandShowWhen()) }
         DisposableEffect(Unit) {
             onDispose {
                 previewSettings.setIslandPreviewRingEnabled(false)
@@ -574,16 +577,41 @@ fun IslandSettingsUI(
             spacing = 2.dp,
             cornerRadius = 24.dp,
         ) {
-            IconToggleItem(
-                iconRes = R.drawable.rounded_mobile_lock_portrait_24,
-                title = stringResource(R.string.island_hide_when_screen_off_title),
-                isChecked = viewModel.isIslandHideWhenScreenOff.value,
-                onCheckedChange = { checked ->
-                    HapticUtil.performVirtualKeyHaptic(view)
-                    viewModel.setIslandHideWhenScreenOff(checked)
-                },
-                modifier = Modifier.highlight(highlightSetting == "island_hide_when_screen_off"),
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceBright, MaterialTheme.shapes.extraSmall)
+                    .padding(top = 12.dp)
+                    .highlight(highlightSetting == "island_show_when" || highlightSetting == "island_hide_when_screen_off"),
+            ) {
+                Text(
+                    text = stringResource(R.string.island_show_when_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                val showWhenOptions = listOf(
+                    SettingsRepository.ISLAND_SHOW_WHEN_UNLOCKED,
+                    SettingsRepository.ISLAND_SHOW_WHEN_SCREEN_ON,
+                    SettingsRepository.ISLAND_SHOW_WHEN_ALWAYS,
+                )
+                val showWhenLabels = mapOf(
+                    SettingsRepository.ISLAND_SHOW_WHEN_UNLOCKED to stringResource(R.string.island_show_when_unlocked),
+                    SettingsRepository.ISLAND_SHOW_WHEN_SCREEN_ON to stringResource(R.string.island_show_when_screen_on),
+                    SettingsRepository.ISLAND_SHOW_WHEN_ALWAYS to stringResource(R.string.island_show_when_always),
+                )
+                SegmentedPicker(
+                    items = showWhenOptions,
+                    selectedItem = showWhen,
+                    onItemSelected = {
+                        showWhen = it
+                        previewSettings.setIslandShowWhen(it)
+                    },
+                    labelProvider = { showWhenLabels[it].orEmpty() },
+                    title = R.string.island_show_when_title,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             IconToggleItem(
                 iconRes = R.drawable.rounded_blur_on_24,
@@ -699,6 +727,7 @@ fun IslandSettingsUI(
                         viewModel.setIslandShowCalls(checked)
                     }
                 },
+                onSettingsClick = { showCallOptionsSheet = true },
                 modifier = Modifier.highlight(highlightSetting == "island_show_calls"),
             )
 
@@ -1123,6 +1152,10 @@ fun IslandSettingsUI(
             viewModel = viewModel,
             onDismissRequest = { showAlarmOptionsSheet = false },
         )
+    }
+
+    if (showCallOptionsSheet) {
+        IslandCallOptionsBottomSheet(onDismissRequest = { showCallOptionsSheet = false })
     }
 
     if (showTimerOptionsSheet) {

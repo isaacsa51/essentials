@@ -62,6 +62,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -131,7 +133,11 @@ class IslandCoordinator(
     private val isWindowSuppressed get() = isLandscape || isFullscreenApp
     private val isContentSuppressed: Boolean
         get() = isWindowSuppressed ||
-            (settings.isIslandHideWhenScreenOffEnabled() && (isScreenOff || keyguardManager?.isKeyguardLocked == true)) ||
+            when (settings.getIslandShowWhen()) {
+                SettingsRepository.ISLAND_SHOW_WHEN_ALWAYS -> false
+                SettingsRepository.ISLAND_SHOW_WHEN_SCREEN_ON -> isScreenOff
+                else -> isScreenOff || keyguardManager?.isKeyguardLocked == true
+            } ||
             (settings.isIslandHideOnShadeEnabled() && isShadeExpanded)
 
     private val compactGestures = CompactGestureController(
@@ -387,6 +393,12 @@ class IslandCoordinator(
             plugin.start(context)
             newScope.launch { plugin.items.collect { controller.setItems(plugin.id, it) } }
         }
+        newScope.launch {
+            controller.state
+                .map { it.stage to it.focusedKey }
+                .distinctUntilChanged()
+                .collect { (stage, key) -> plugins.forEach { it.onFocusChanged(stage, key) } }
+        }
         if (settings.isIslandSuppressSystemHeadsUpEnabled()) settings.applyHeadsUpSuppression(true)
         applyPreviewStage()
     }
@@ -510,7 +522,7 @@ class IslandCoordinator(
         when (key) {
             SettingsRepository.KEY_ISLAND_ENABLED -> updateState()
             SettingsRepository.KEY_ISLAND_DYNAMIC_HIDE_STATUS_BAR -> syncStatusBar(controller.state.value.stage)
-            SettingsRepository.KEY_ISLAND_HIDE_WHEN_SCREEN_OFF -> applySuppression()
+            SettingsRepository.KEY_ISLAND_HIDE_WHEN_SCREEN_OFF, SettingsRepository.KEY_ISLAND_SHOW_WHEN -> applySuppression()
             SettingsRepository.KEY_ISLAND_HIDE_IN_OWNER_APP -> applyOwnerAppHiding()
             in LAUNCHER_ONLY_KEYS.values -> applyLauncherOnly()
             SettingsRepository.KEY_ISLAND_HIDE_ON_SHADE -> applySuppression()
