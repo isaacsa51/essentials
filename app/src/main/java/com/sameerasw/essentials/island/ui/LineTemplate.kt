@@ -37,10 +37,10 @@ fun LineTemplate(line: LineContent, spec: IslandLayoutSpec) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val icon: @Composable () -> Unit = {
-            Box(Modifier.size(spec.cellSize), contentAlignment = Alignment.Center) { line.icon() }
+            Box(Modifier.squareFit(spec.cellSize), contentAlignment = Alignment.Center) { line.icon() }
         }
         val endSlot: @Composable () -> Unit = {
-            line.endSlot?.let { slot -> Box(Modifier.size(spec.cellSize), contentAlignment = Alignment.Center) { slot() } }
+            line.endSlot?.let { slot -> Box(Modifier.squareFit(spec.cellSize), contentAlignment = Alignment.Center) { slot() } }
         }
         if (spec.growDirection == 0) {
             Row(
