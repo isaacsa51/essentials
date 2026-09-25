@@ -561,6 +561,7 @@ class SettingsRepository(
         const val KEY_STATUS_GLANCE_SHOW_FLASHLIGHT = "status_glance_show_flashlight"
         const val KEY_STATUS_GLANCE_SHOW_CALENDAR = "status_glance_show_calendar"
         const val KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME = "status_glance_calendar_timeframe"
+        const val KEY_ISLAND_CALENDAR_PRIORITY_MINUTES = "island_calendar_priority_minutes"
         const val KEY_STATUS_GLANCE_CALENDAR_SELECTED_CALENDARS = "status_glance_calendar_selected_calendars"
         const val KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY = "status_glance_calendar_show_all_day"
         const val KEY_STATUS_GLANCE_SHOW_MEDIA = "status_glance_show_media"
@@ -3843,6 +3844,9 @@ class SettingsRepository(
 
     fun getStatusGlanceCalendarTimeframe(): String = getString(KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME, "today") ?: "today"
     fun setStatusGlanceCalendarTimeframe(timeframe: String) = putString(KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME, timeframe)
+
+    fun getIslandCalendarPriorityMinutes(): Int = prefs.getInt(KEY_ISLAND_CALENDAR_PRIORITY_MINUTES, 10)
+    fun setIslandCalendarPriorityMinutes(minutes: Int) = prefs.edit().putInt(KEY_ISLAND_CALENDAR_PRIORITY_MINUTES, minutes).apply()
 
     fun isStatusGlanceCalendarShowAllDayEnabled(): Boolean = getBoolean(KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY, false)
     fun setStatusGlanceCalendarShowAllDayEnabled(enabled: Boolean) = putBoolean(KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY, enabled)

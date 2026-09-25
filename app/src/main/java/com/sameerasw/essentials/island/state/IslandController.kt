@@ -230,8 +230,9 @@ class IslandController(
 
     private fun allItems(): Map<String, IslandItem> =
         itemsBySource
-            .filterKeys { onLauncher || it !in launcherOnlySources }
-            .values.flatten()
+            .flatMap { (source, items) ->
+                if (onLauncher || source !in launcherOnlySources) items else items.filter { it.bypassLauncherOnly }
+            }
             .filter { hiddenPackage == null || it.sourcePackage != hiddenPackage }
             .associateBy { it.key }
 

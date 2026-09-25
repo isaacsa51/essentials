@@ -2849,6 +2849,10 @@
     <string name="island_expanded_scale_title">Expanded scale</string>
     <string name="island_expanded_scale_desc">Grow the expanded island evenly on every side</string>
     <string name="island_camera_position_title">Camera position</string>
+    <string name="island_calendar_priority_title">Priority when close</string>
+    <string name="island_calendar_priority_disabled">Disabled</string>
+    <string name="island_calendar_priority_minutes">%1$d mins</string>
+    <string name="island_calendar_priority_hours">%1$d h</string>
     <string name="dev_simulate_weather_title">Simulate weather</string>
     <string name="island_preview_ring_title">Show alignment hint</string>
     <string name="island_preview_stage_title">Preview stage</string>
