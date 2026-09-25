@@ -496,6 +496,7 @@ class SettingsRepository(
         const val KEY_ISLAND_DISMISS_ON_OUTSIDE = "island_dismiss_on_outside"
         const val KEY_ISLAND_CAMERA_POSITION = "island_camera_position"
         const val KEY_ISLAND_PREVIEW_RING = "island_preview_ring"
+        const val KEY_DEBUG_SIMULATED_WEATHER = "debug_simulated_weather"
         const val KEY_ISLAND_PREVIEW_STAGE = "island_preview_stage"
         const val ISLAND_PREVIEW_STAGE_AUTO = "auto"
         const val ISLAND_PREVIEW_STAGE_PEEK = "peek"

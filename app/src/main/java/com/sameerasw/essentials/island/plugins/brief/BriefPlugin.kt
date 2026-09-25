@@ -6,6 +6,7 @@ import com.sameerasw.essentials.weather.effects.DeviceWeatherHaptics
 import com.sameerasw.essentials.weather.effects.WeatherEffectHaptics
 import com.sameerasw.essentials.weather.effects.WeatherEffectSpec
 import com.sameerasw.essentials.weather.effects.WeatherEffects
+import com.sameerasw.essentials.weather.effects.WeatherSimulation
 import com.sameerasw.essentials.utils.DeviceUtils
 import com.sameerasw.essentials.weather.WeatherFormat
 import com.sameerasw.essentials.weather.WeatherRepository
@@ -134,6 +135,7 @@ class BriefPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_SHOW_WEATHER,
         SettingsRepository.KEY_ISLAND_WEATHER_EFFECTS,
         SettingsRepository.KEY_ISLAND_WEATHER_HAPTICS,
+        SettingsRepository.KEY_DEBUG_SIMULATED_WEATHER,
         SettingsRepository.KEY_WEATHER_UNITS,
         SettingsRepository.KEY_ISLAND_BRIEF_SHOW_ALARM,
         SettingsRepository.KEY_ISLAND_ALARM_WINDOW_HOURS,
@@ -155,6 +157,7 @@ class BriefPlugin : BaseIslandPlugin() {
             unit = WeatherFormat.unitFor(settings.getWeatherUnits()),
             effects = settings.isIslandShowWeatherEnabled() && settings.isIslandWeatherEffectsEnabled() && !DeviceUtils.isPowerSaveMode(context),
             haptics = settings.isIslandWeatherHapticsEnabled(),
+            simulated = WeatherSimulation.find(settings.getString(SettingsRepository.KEY_DEBUG_SIMULATED_WEATHER, WeatherSimulation.OFF))?.spec,
         )
         publish(
             IslandItem(
@@ -210,8 +213,8 @@ private fun BriefExpanded(
     val pageShape = RoundedCornerShape(scope.spec.expandedCorner)
     Box(propagateMinConstraints = true) {
         val weatherState by WeatherRepository.state.collectAsState()
-        val effectSpec = remember(weather.effects, weatherState.snapshot) {
-            weatherState.snapshot?.takeIf { weather.effects }?.let(WeatherEffectSpec::from) ?: WeatherEffectSpec.None
+        val effectSpec = remember(weather.effects, weather.simulated, weatherState.snapshot) {
+            weather.simulated ?: weatherState.snapshot?.takeIf { weather.effects }?.let(WeatherEffectSpec::from) ?: WeatherEffectSpec.None
         }
         val weatherHaptics = remember(context, weather.haptics) { DeviceWeatherHaptics(context).takeIf { weather.haptics } }
         if (!SurfaceBackdrop { BriefBackground(page, media, showGlow, scope, effectSpec, weatherHaptics, Modifier.fillMaxSize()) }) {
@@ -320,7 +323,13 @@ private sealed interface BriefPage {
     data object Weather : BriefPage
 }
 
-private class BriefWeather(val enabled: Boolean, val unit: TemperatureUnit, val effects: Boolean, val haptics: Boolean)
+private class BriefWeather(
+    val enabled: Boolean,
+    val unit: TemperatureUnit,
+    val effects: Boolean,
+    val haptics: Boolean,
+    val simulated: WeatherEffectSpec? = null,
+)
 
 @Composable
 private fun SwipeBackPage(scope: IslandExpandedScope, onBack: () -> Unit, content: @Composable () -> Unit) {

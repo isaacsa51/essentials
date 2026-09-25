@@ -2849,6 +2849,7 @@
     <string name="island_expanded_scale_title">Expanded scale</string>
     <string name="island_expanded_scale_desc">Grow the expanded island evenly on every side</string>
     <string name="island_camera_position_title">Camera position</string>
+    <string name="dev_simulate_weather_title">Simulate weather</string>
     <string name="island_preview_ring_title">Show alignment hint</string>
     <string name="island_preview_stage_title">Preview stage</string>
     <string name="island_preview_stage_auto">Auto</string>
