@@ -483,7 +483,7 @@ fun IslandSettingsUI(
                     HapticUtil.performUIHaptic(view)
                     viewModel.setIslandTimeoutMs((it * 1000).toLong())
                 },
-                valueRange = 2f..10f,
+                valueRange = 2f..60f,
                 increment = 0.5f,
                 iconRes = R.drawable.rounded_timer_24,
                 valueFormatter = { "%.1fs".format(it) },
