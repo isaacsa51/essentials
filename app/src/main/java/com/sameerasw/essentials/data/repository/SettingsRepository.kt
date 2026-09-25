@@ -495,6 +495,12 @@ class SettingsRepository(
         const val KEY_ISLAND_HIDE_ON_SHADE = "island_hide_on_shade"
         const val KEY_ISLAND_DISMISS_ON_OUTSIDE = "island_dismiss_on_outside"
         const val KEY_ISLAND_CAMERA_POSITION = "island_camera_position"
+        const val KEY_ISLAND_PREVIEW_RING = "island_preview_ring"
+        const val KEY_DEBUG_SIMULATED_WEATHER = "debug_simulated_weather"
+        const val KEY_ISLAND_PREVIEW_STAGE = "island_preview_stage"
+        const val ISLAND_PREVIEW_STAGE_AUTO = "auto"
+        const val ISLAND_PREVIEW_STAGE_PEEK = "peek"
+        const val ISLAND_PREVIEW_STAGE_EXPANDED = "expanded"
         const val KEY_ISLAND_SHOW_CALLS = "island_show_calls"
         const val KEY_ISLAND_SHOW_TIMERS = "island_show_timers"
         const val KEY_ISLAND_SHOW_WEATHER = "island_show_weather"
@@ -555,6 +561,7 @@ class SettingsRepository(
         const val KEY_STATUS_GLANCE_SHOW_FLASHLIGHT = "status_glance_show_flashlight"
         const val KEY_STATUS_GLANCE_SHOW_CALENDAR = "status_glance_show_calendar"
         const val KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME = "status_glance_calendar_timeframe"
+        const val KEY_ISLAND_CALENDAR_PRIORITY_MINUTES = "island_calendar_priority_minutes"
         const val KEY_STATUS_GLANCE_CALENDAR_SELECTED_CALENDARS = "status_glance_calendar_selected_calendars"
         const val KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY = "status_glance_calendar_show_all_day"
         const val KEY_STATUS_GLANCE_SHOW_MEDIA = "status_glance_show_media"
@@ -3740,6 +3747,13 @@ class SettingsRepository(
         getString(KEY_ISLAND_CAMERA_POSITION, ISLAND_CAMERA_POSITION_CENTER) ?: ISLAND_CAMERA_POSITION_CENTER
     fun setIslandCameraPosition(value: String) = putString(KEY_ISLAND_CAMERA_POSITION, value)
 
+    fun isIslandPreviewRingEnabled(): Boolean = getBoolean(KEY_ISLAND_PREVIEW_RING, false)
+    fun setIslandPreviewRingEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_PREVIEW_RING, enabled)
+
+    fun getIslandPreviewStage(): String =
+        getString(KEY_ISLAND_PREVIEW_STAGE, ISLAND_PREVIEW_STAGE_AUTO) ?: ISLAND_PREVIEW_STAGE_AUTO
+    fun setIslandPreviewStage(value: String) = putString(KEY_ISLAND_PREVIEW_STAGE, value)
+
     fun getIslandExpandedScale(): Float = getFloat(KEY_ISLAND_EXPANDED_SCALE, 1f)
     fun setIslandExpandedScale(value: Float) = putFloat(KEY_ISLAND_EXPANDED_SCALE, value)
 
@@ -3830,6 +3844,9 @@ class SettingsRepository(
 
     fun getStatusGlanceCalendarTimeframe(): String = getString(KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME, "today") ?: "today"
     fun setStatusGlanceCalendarTimeframe(timeframe: String) = putString(KEY_STATUS_GLANCE_CALENDAR_TIMEFRAME, timeframe)
+
+    fun getIslandCalendarPriorityMinutes(): Int = prefs.getInt(KEY_ISLAND_CALENDAR_PRIORITY_MINUTES, 10)
+    fun setIslandCalendarPriorityMinutes(minutes: Int) = prefs.edit().putInt(KEY_ISLAND_CALENDAR_PRIORITY_MINUTES, minutes).apply()
 
     fun isStatusGlanceCalendarShowAllDayEnabled(): Boolean = getBoolean(KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY, false)
     fun setStatusGlanceCalendarShowAllDayEnabled(enabled: Boolean) = putBoolean(KEY_STATUS_GLANCE_CALENDAR_SHOW_ALL_DAY, enabled)

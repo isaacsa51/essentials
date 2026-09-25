@@ -99,6 +99,7 @@ class IslandItem(
     val priorityOverride: Int? = null,
     
     val compactVisible: Boolean = true,
+    val bypassLauncherOnly: Boolean = false,
 ) {
     val effectivePriority: Int get() = priorityOverride ?: priority
 

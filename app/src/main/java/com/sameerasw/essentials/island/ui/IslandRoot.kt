@@ -34,8 +34,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -49,6 +54,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -107,6 +113,7 @@ fun IslandRoot(
     actions: IslandActions,
     onTargetBoundsChanged: (IntRect) -> Unit,
     registerCollapseAnimator: (((() -> Unit) -> Unit)?) -> Unit = {},
+    showCameraRing: Boolean = false,
 ) {
     val view = LocalView.current
     val density = LocalDensity.current
@@ -144,6 +151,10 @@ fun IslandRoot(
     val outgoingMotion = remember { Animatable(0f) }
     val contentShiftPx = with(density) { 10.dp.toPx() }
     val collapse = remember { Animatable(0f) }
+    // Hidden: the width shrinks to a circle first, then the circle shrinks to nothing, so it never turns oval.
+    val squash = remember { Animatable(0f) }
+    val squashPx = minSurfaceHeight
+    val squashStarted = remember { BooleanArray(1) }
     val dismissOffset = remember { Animatable(0f) }
     var target by remember { mutableStateOf(IntSize.Zero) }
     var compactSize by remember { mutableStateOf(IntSize.Zero) }
@@ -176,7 +187,11 @@ fun IslandRoot(
     }
 
     LaunchedEffect(key) {
-        if (stage != IslandStage.Hidden) visible = true
+        if (stage != IslandStage.Hidden) {
+            visible = true
+            squashStarted[0] = false
+            squash.snapTo(0f)
+        }
         if (stage != IslandStage.Compact) {
             launch { jelly.press.animateTo(0f, CompactJellyState.JellySpring) }
             launch { jelly.releaseStretch(0f, 0f) }
@@ -204,23 +219,28 @@ fun IslandRoot(
         val growing = stage.rank >= previousStage.rank
         previousStage = stage
         val leaving = lastKey
-        lastKey = key
         val thrownAway = dismissCommitted
         dismissCommitted = false
-        if (leaving != key && leaving.stage != IslandStage.Hidden && !thrownAway) {
+        val handOver = leaving != key && leaving.stage != IslandStage.Hidden && !thrownAway
+        // Snap before lastKey is published: until then the pending frame override below keeps drawing the handover.
+        if (handOver) {
+            outgoingAlpha.snapTo(1f)
+            outgoingMotion.snapTo(0f)
+        }
+        // Shrinking content mirrors the outgoing layer: it rises from below while fading in, once that layer is mostly gone.
+        contentMotion.snapTo(if (growing) -1f else 1f)
+        contentAlpha.snapTo(0f)
+        if (handOver) {
             outgoing = leaving
             launch {
-                outgoingAlpha.snapTo(1f)
-                outgoingMotion.snapTo(0f)
                 launch { outgoingMotion.animateTo(if (growing) 1f else -1f, IslandMotion.collapseFloat()) }
                 outgoingAlpha.animateTo(0f, tween(durationMillis = 140))
                 if (outgoing == leaving) outgoing = null
             }
         }
-        contentMotion.snapTo(if (growing) -1f else 1f)
-        contentAlpha.snapTo(0f)
+        lastKey = key
         launch { contentMotion.animateTo(0f, if (growing) IslandMotion.contentSpring() else IslandMotion.collapseFloat()) }
-        contentAlpha.animateTo(1f, tween(durationMillis = if (growing) 180 else 120, delayMillis = if (growing) 30 else 0))
+        contentAlpha.animateTo(1f, tween(durationMillis = if (growing) 180 else 160, delayMillis = if (growing) 30 else 100))
     }
     val outsetPx = with(density) { spec.expandedOutset.toPx() }
     val cameraSlotPx = with(density) { spec.cameraSlotWidth.roundToPx() }
@@ -308,7 +328,7 @@ fun IslandRoot(
                     val dx = spec.growDirection * (p.width - cameraSlotPx) / 2
                     layout(p.width, p.height) { p.place(dx, 0) }
                 }
-                .offset { IntOffset(0, -edgeShift.floatValue.roundToInt()) }
+                .offset { IntOffset(0, (squashPx / 2f * squash.value - edgeShift.floatValue).roundToInt()) }
                 .compactJelly(jelly, jellyRangePx)
                 .graphicsLayer {
                     alpha = if (visible) 1f else 0f
@@ -325,13 +345,25 @@ fun IslandRoot(
                     val child = measurable.measure(constraints)
                     val t = collapse.value.coerceIn(0f, 1f)
                     val end = when {
-                        currentState.arrangement.visibleItems.isEmpty() -> IntSize(minSurfaceWidth, minSurfaceHeight)
+                        currentState.arrangement.visibleItems.isEmpty() -> IntSize(minSurfaceHeight, minSurfaceHeight)
                         compactSize != IntSize.Zero -> compactSize
                         else -> fallbackCompact
                     }
                     // Never smaller than the camera, whatever a spring or fling does.
-                    val w = (if (t > 0f) lerp(child.width, end.width, t) else child.width).coerceAtLeast(minSurfaceWidth)
-                    val h = (if (t > 0f) lerp(child.height, end.height, t) else child.height).coerceAtLeast(minSurfaceHeight)
+                    val preW = (if (t > 0f) lerp(child.width, end.width, t) else child.width).coerceAtLeast(minSurfaceWidth)
+                    if (currentState.stage == IslandStage.Hidden && !squashStarted[0] && preW <= minSurfaceHeight) {
+                        squashStarted[0] = true
+                        scope.launch {
+                            squash.animateTo(1f, tween(IslandMotion.COLLAPSE_MS, easing = LinearEasing))
+                            if (currentState.stage == IslandStage.Hidden) visible = false
+                        }
+                    }
+                    val w = lerp(preW, 0, squash.value)
+                    val h = lerp(
+                        (if (t > 0f) lerp(child.height, end.height, t) else child.height).coerceAtLeast(minSurfaceHeight),
+                        0,
+                        squash.value,
+                    )
                     val range = (expandedHeight[0] - minSurfaceHeight).toFloat()
                     val p = if (range > 0f) ((h - minSurfaceHeight) / range).coerceIn(0f, 1f) else 0f
                     edgeShift.floatValue = outsetPx * p
@@ -346,7 +378,6 @@ fun IslandRoot(
                     },
                     alignment = Alignment.TopCenter,
                     finishedListener = { _, _ ->
-                        if (currentState.stage == IslandStage.Hidden) visible = false
                         if (dragCommitted && currentState.stage != IslandStage.Expanded && currentState.stage != IslandStage.Line) {
                             dragCommitted = false
                             scope.launch { collapse.snapTo(0f) }
@@ -555,7 +586,12 @@ fun IslandRoot(
                 },
         ) {
             val item = key.itemKey?.let { state.items[it] ?: lastItems[it] }
+            // The frame the key changes on is drawn before the effect above runs: draw it as the handover's first frame
+            // (old content fully visible, new content transparent) instead of flashing the new content.
             val previewing = key.stage == IslandStage.Expanded || key.stage == IslandStage.Line
+            val pending = key != lastKey && !(dragCommitted && !previewing)
+            val shownOutgoing = (if (pending && lastKey.stage != IslandStage.Hidden && !dismissCommitted) lastKey else outgoing)
+                ?.takeIf { it != key }
             val cardCorner = if (key.stage == IslandStage.Expanded) spec.expandedCorner else spec.compactHeight / 2
             val layerAlign = when {
                 spec.growDirection > 0 -> Alignment.TopStart
@@ -576,30 +612,6 @@ fun IslandRoot(
                 ) { backdrop() }
             }
             Box(contentAlignment = layerAlign) {
-            outgoing?.let { out ->
-                val outItem = out.itemKey?.let { state.items[it] ?: lastItems[it] }
-                Box(
-                    Modifier
-                        .layout { measurable, _ ->
-                            val p = measurable.measure(Constraints())
-                            val x = when {
-                                spec.growDirection > 0 -> 0
-                                spec.growDirection < 0 -> -p.width
-                                else -> -p.width / 2
-                            }
-                            layout(0, 0) { p.place(x, 0) }
-                        }
-                        .graphicsLayer {
-                            val m = outgoingMotion.value
-                            alpha = outgoingAlpha.value
-                            val scale = 1f + contentScaleFor(out.stage) * m
-                            scaleX = scale
-                            scaleY = scale
-                            translationY = contentShiftPx * m + edgeCorrection(out.stage)
-                            transformOrigin = TransformOrigin(contentOriginX, 0f)
-                        },
-                ) { StageContent(out.stage, outItem, state, spec, actions, interactive = false) }
-            }
             val queuedNext = item?.queue?.next
             if (showDismissReveal && queuedNext != null) {
                 Box(
@@ -625,39 +637,67 @@ fun IslandRoot(
                     modifier = Modifier.matchParentSize(),
                 )
             }
-            Box(
-                Modifier
-                    .layout { measurable, constraints ->
-                        val p = measurable.measure(constraints)
-                        if (key.stage == IslandStage.Expanded) expandedHeight[0] = p.height
-                        layout(p.width, p.height) { p.place(0, 0) }
+            // Keyed, so the leaving layer keeps its composition (a Line marquee doesn't restart when it becomes outgoing).
+            for (layerKey in listOfNotNull(shownOutgoing, key)) key(layerKey) {
+                val current = layerKey == key
+                val layerModifier = if (current) {
+                    Modifier
+                        .layout { measurable, constraints ->
+                            val p = measurable.measure(constraints)
+                            if (key.stage == IslandStage.Expanded) expandedHeight[0] = p.height
+                            layout(p.width, p.height) { p.place(0, 0) }
+                        }
+                        .onSizeChanged {
+                            target = it
+                            if (key.stage == IslandStage.Compact) compactSize = it
+                        }
+                        .graphicsLayer {
+                            alpha = (if (pending) 0f else contentAlpha.value) *
+                                (if (previewing) 1f - collapse.value * 1.6f else 1f).coerceIn(0f, 1f) *
+                                if (surfaceSize.width > 0) (1f - abs(dismissOffset.value) / surfaceSize.width * 0.6f).coerceIn(0f, 1f) else 1f
+                            translationX = dismissOffset.value + wiggle.value
+                            val m = contentMotion.value - if (previewing) collapse.value.coerceIn(0f, 1f) else 0f
+                            // Only shrink (growing entry, drag preview); rising in from below keeps its size.
+                            val scale = 1f + contentScaleFor(key.stage) * m.coerceAtMost(0f)
+                            scaleX = scale
+                            scaleY = scale
+                            translationY = contentShiftPx * m + edgeCorrection(key.stage)
+                            transformOrigin = TransformOrigin(contentOriginX, 0f)
+                            val sliding = dismissOffset.value != 0f
+                            shape = RoundedCornerShape(if (sliding) cardCorner.toPx() else 0f)
+                            clip = sliding
+                        }
+                        .drawBehind { if (dismissOffset.value != 0f) drawRect(Color.Black) }
+                } else {
+                    Modifier
+                        .layout { measurable, _ ->
+                            val p = measurable.measure(Constraints())
+                            val x = when {
+                                spec.growDirection > 0 -> 0
+                                spec.growDirection < 0 -> -p.width
+                                else -> -p.width / 2
+                            }
+                            layout(0, 0) { p.place(x, 0) }
+                        }
+                        .graphicsLayer {
+                            val m = if (pending) 0f else outgoingMotion.value
+                            alpha = if (pending) 1f else outgoingAlpha.value
+                            val scale = 1f + contentScaleFor(layerKey.stage) * m
+                            scaleX = scale
+                            scaleY = scale
+                            translationY = contentShiftPx * m + edgeCorrection(layerKey.stage)
+                            transformOrigin = TransformOrigin(contentOriginX, 0f)
+                        }
+                }
+                val layerItem = if (current) item else layerKey.itemKey?.let { state.items[it] ?: lastItems[it] }
+                Box(layerModifier) {
+                    CompositionLocalProvider(LocalIslandBackdropSlot provides backdropSlot.takeIf { current }) {
+                        StageContent(
+                            layerKey.stage, layerItem, state, spec, actions, interactive = current,
+                            onCellTap = ::handleTap,
+                            onCellLongPress = ::handleLongPress,
+                        )
                     }
-                    .onSizeChanged {
-                        target = it
-                        if (key.stage == IslandStage.Compact) compactSize = it
-                    }
-                    .graphicsLayer {
-                        alpha = contentAlpha.value * (if (previewing) 1f - collapse.value * 1.6f else 1f).coerceIn(0f, 1f) *
-                            if (surfaceSize.width > 0) (1f - abs(dismissOffset.value) / surfaceSize.width * 0.6f).coerceIn(0f, 1f) else 1f
-                        translationX = dismissOffset.value + wiggle.value
-                        val m = contentMotion.value - if (previewing) collapse.value.coerceIn(0f, 1f) else 0f
-                        val scale = 1f + contentScaleFor(key.stage) * m
-                        scaleX = scale
-                        scaleY = scale
-                        translationY = contentShiftPx * m + edgeCorrection(key.stage)
-                        transformOrigin = TransformOrigin(contentOriginX, 0f)
-                        val sliding = dismissOffset.value != 0f
-                        shape = RoundedCornerShape(if (sliding) cardCorner.toPx() else 0f)
-                        clip = sliding
-                    }
-                    .drawBehind { if (dismissOffset.value != 0f) drawRect(Color.Black) },
-            ) {
-                CompositionLocalProvider(LocalIslandBackdropSlot provides backdropSlot) {
-                    StageContent(
-                        key.stage, item, state, spec, actions, interactive = true,
-                        onCellTap = ::handleTap,
-                        onCellLongPress = ::handleLongPress,
-                    )
                 }
             }
             SwipeIntentChip(
@@ -686,6 +726,19 @@ fun IslandRoot(
                     CompactTemplate(state = state, spec = spec, onCellTap = {}, onCellLongPress = {})
                 }
             }
+            }
+        }
+        if (showCameraRing) {
+            val ringColor = MaterialTheme.colorScheme.primary
+            Canvas(Modifier.fillMaxSize()) {
+                val stroke = 2.dp.toPx()
+                val radius = spec.compactHeight.toPx() / 2f
+                drawCircle(
+                    color = ringColor,
+                    radius = radius + stroke / 2f,
+                    center = Offset(size.width / 2f, spec.surfaceTop.toPx() + radius),
+                    style = Stroke(width = stroke),
+                )
             }
         }
     }
@@ -755,7 +808,7 @@ private fun StageContent(
 ) {
     val a = if (interactive) actions else NoActions
     when (stage) {
-        IslandStage.Hidden -> Spacer(Modifier.size(spec.cameraDiameter, spec.compactHeight))
+        IslandStage.Hidden -> Spacer(Modifier.size(spec.compactHeight, spec.compactHeight))
         IslandStage.Compact -> {
             val feedback by IslandSlideFeedback.state.collectAsState()
             val takeover = feedback

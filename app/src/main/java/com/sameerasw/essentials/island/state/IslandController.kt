@@ -34,6 +34,7 @@ class IslandController(
 
     var lineStageEnabled: Boolean = true
     var expandedTimeoutMs: Long = 0L
+    var holdFocus: Boolean = false
     var onStageChanged: ((IslandStage) -> Unit)? = null
 
     var collapseAnimator: ((commit: () -> Unit) -> Unit)? = null
@@ -154,6 +155,8 @@ class IslandController(
         }
     }
 
+    fun collapseImmediately() = collapseNow()
+
     private fun collapseNow() {
         clearFocus()
         recompute()
@@ -168,8 +171,8 @@ class IslandController(
         recompute()
     }
 
-    fun peek(itemKey: String, durationMs: Long) {
-        if (!lineStageEnabled || suppressed || expandedKey != null) return
+    fun peek(itemKey: String, durationMs: Long, force: Boolean = false) {
+        if ((!lineStageEnabled && !force) || suppressed || expandedKey != null) return
         val item = allItems()[itemKey] ?: return
         if (item.line == null) return
         cancelPeek()
@@ -188,6 +191,7 @@ class IslandController(
     }
 
     private fun schedulePeekEnd(itemKey: String) {
+        if (holdFocus) return
         peekTimer = scheduler.schedule(peekDurationMs) {
             if (peekKey == itemKey) {
                 peekKey = null
@@ -207,7 +211,7 @@ class IslandController(
         expandedTimer = null
         val timeout = expandedTimeoutMs
         val key = expandedKey ?: return
-        if (timeout <= 0L) return
+        if (timeout <= 0L || holdFocus) return
         expandedTimer = scheduler.schedule(timeout) { if (expandedKey == key) collapse() }
     }
 
@@ -226,8 +230,9 @@ class IslandController(
 
     private fun allItems(): Map<String, IslandItem> =
         itemsBySource
-            .filterKeys { onLauncher || it !in launcherOnlySources }
-            .values.flatten()
+            .flatMap { (source, items) ->
+                if (onLauncher || source !in launcherOnlySources) items else items.filter { it.bypassLauncherOnly }
+            }
             .filter { hiddenPackage == null || it.sourcePackage != hiddenPackage }
             .associateBy { it.key }
 
