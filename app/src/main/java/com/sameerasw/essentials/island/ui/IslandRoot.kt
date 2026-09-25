@@ -36,6 +36,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -107,6 +111,7 @@ fun IslandRoot(
     actions: IslandActions,
     onTargetBoundsChanged: (IntRect) -> Unit,
     registerCollapseAnimator: (((() -> Unit) -> Unit)?) -> Unit = {},
+    showCameraRing: Boolean = false,
 ) {
     val view = LocalView.current
     val density = LocalDensity.current
@@ -686,6 +691,19 @@ fun IslandRoot(
                     CompactTemplate(state = state, spec = spec, onCellTap = {}, onCellLongPress = {})
                 }
             }
+            }
+        }
+        if (showCameraRing) {
+            val ringColor = MaterialTheme.colorScheme.primary
+            Canvas(Modifier.fillMaxSize()) {
+                val stroke = 2.dp.toPx()
+                val radius = spec.compactHeight.toPx() / 2f
+                drawCircle(
+                    color = ringColor,
+                    radius = radius + stroke / 2f,
+                    center = Offset(size.width / 2f, spec.surfaceTop.toPx() + radius),
+                    style = Stroke(width = stroke),
+                )
             }
         }
     }

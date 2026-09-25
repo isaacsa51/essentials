@@ -2849,6 +2849,14 @@
     <string name="island_expanded_scale_title">Expanded scale</string>
     <string name="island_expanded_scale_desc">Grow the expanded island evenly on every side</string>
     <string name="island_camera_position_title">Camera position</string>
+    <string name="island_preview_ring_title">Show alignment hint</string>
+    <string name="island_preview_stage_title">Preview stage</string>
+    <string name="island_preview_stage_auto">Auto</string>
+    <string name="island_preview_stage_peek">Peek</string>
+    <string name="island_preview_stage_expanded">Expanded</string>
+    <string name="island_preview_sample_title">Sample notification</string>
+    <string name="island_preview_sample_text">Aligning the island</string>
+    <string name="island_preview_sample_time">now</string>
     <string name="island_camera_position_left">Left</string>
     <string name="island_camera_position_center">Center</string>
     <string name="island_camera_position_right">Right</string>

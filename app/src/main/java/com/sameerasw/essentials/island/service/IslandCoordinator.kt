@@ -62,6 +62,19 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.sameerasw.essentials.R
+import com.sameerasw.essentials.island.model.CompactCell
+import com.sameerasw.essentials.island.model.CompactPlacement
+import com.sameerasw.essentials.island.model.ExpandedContent
+import com.sameerasw.essentials.island.model.IslandItem
+import com.sameerasw.essentials.island.model.IslandPriority
+import com.sameerasw.essentials.island.model.LineContent
+import com.sameerasw.essentials.island.ui.components.IslandIcon
 
 class IslandCoordinator(
     private val service: AccessibilityService,
@@ -105,6 +118,7 @@ class IslandCoordinator(
     private var scope: CoroutineScope? = null
     private var geometry: CameraGeometry? = null
     private val spec = MutableStateFlow(IslandLayoutSpec())
+    private val showRing = MutableStateFlow(false)
 
     private var isScreenOff = false
     private var isLandscape = false
@@ -183,6 +197,8 @@ class IslandCoordinator(
             syncStatusBar(stage)
             reportVisibility(stage != IslandStage.Hidden)
         }
+        settings.setIslandPreviewRingEnabled(false)
+        settings.setIslandPreviewStage(SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO)
         updateState()
     }
 
@@ -314,7 +330,12 @@ class IslandCoordinator(
                 CompositionLocalProvider(
                     LocalDensity provides Density(base.density, base.fontScale * layoutSpec.fontScale),
                 ) {
-                    IslandRoot(state, layoutSpec, actions, windowHost::onTargetBoundsChanged) { controller.collapseAnimator = it }
+                    val ring by showRing.collectAsState()
+                    IslandRoot(
+                        state, layoutSpec, actions, windowHost::onTargetBoundsChanged,
+                        registerCollapseAnimator = { controller.collapseAnimator = it },
+                        showCameraRing = ring,
+                    )
                 }
             }
         }
@@ -340,11 +361,60 @@ class IslandCoordinator(
             newScope.launch { plugin.items.collect { controller.setItems(plugin.id, it) } }
         }
         if (settings.isIslandSuppressSystemHeadsUpEnabled()) settings.applyHeadsUpSuppression(true)
+        applyPreviewStage()
     }
+
+    private fun applyPreviewRing() {
+        showRing.value = settings.isIslandPreviewRingEnabled()
+    }
+
+    private fun applyPreviewStage() {
+        mainHandler.post {
+            if (!running) return@post
+            val stage = settings.getIslandPreviewStage()
+            val locked = stage != SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO
+            controller.holdFocus = locked
+            controller.setItems(PREVIEW_SOURCE, if (locked) listOf(previewItem()) else emptyList())
+            controller.collapseImmediately()
+            when (stage) {
+                SettingsRepository.ISLAND_PREVIEW_STAGE_PEEK -> controller.peek(PREVIEW_KEY, 0L, force = true)
+                SettingsRepository.ISLAND_PREVIEW_STAGE_EXPANDED -> {
+                    val hasBrief = controller.state.value.items[BriefPlugin.ITEM_KEY]?.expanded != null
+                    controller.expand(if (hasBrief) BriefPlugin.ITEM_KEY else PREVIEW_KEY)
+                }
+            }
+        }
+    }
+
+    private fun previewItem() = IslandItem(
+        key = PREVIEW_KEY,
+        priority = IslandPriority.NOTIFICATION,
+        placement = CompactPlacement.Dynamic,
+        compact = listOf(CompactCell("preview.icon") { IslandIcon(R.drawable.rounded_notifications_unread_24, size = 18.dp) }),
+        line = LineContent(
+            icon = { IslandIcon(R.drawable.rounded_notifications_unread_24, size = 24.dp) },
+            start = service.getString(R.string.island_preview_sample_title),
+            end = service.getString(R.string.island_preview_sample_text),
+        ),
+        expanded = ExpandedContent { scope ->
+            Column(
+                Modifier
+                    .padding(scope.spec.expandedOutset)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = scope.spec.expandedTopPadding + scope.spec.compactHeight, bottom = scope.spec.expandedBottomPadding),
+            ) {
+                Text(stringResource(R.string.island_preview_sample_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.island_preview_sample_text), style = MaterialTheme.typography.bodyMedium)
+            }
+        },
+        compactVisible = false,
+    )
 
     private fun stop() {
         if (!running) return
         running = false
+        controller.holdFocus = false
+        controller.setItems(PREVIEW_SOURCE, emptyList())
         plugins.forEach {
             it.stop()
             controller.setItems(it.id, emptyList())
@@ -392,6 +462,7 @@ class IslandCoordinator(
         controller.lineStageEnabled = settings.isIslandLineStageEnabled()
         controller.relayout()
         controller.expandedTimeoutMs = settings.getIslandExpandedTimeoutMs()
+        applyPreviewRing()
     }
 
     private fun applySuppression() {
@@ -416,6 +487,8 @@ class IslandCoordinator(
             SettingsRepository.KEY_ISLAND_HIDE_IN_OWNER_APP -> applyOwnerAppHiding()
             in LAUNCHER_ONLY_KEYS.values -> applyLauncherOnly()
             SettingsRepository.KEY_ISLAND_HIDE_ON_SHADE -> applySuppression()
+            SettingsRepository.KEY_ISLAND_PREVIEW_RING -> if (running) applyPreviewRing()
+            SettingsRepository.KEY_ISLAND_PREVIEW_STAGE -> applyPreviewStage()
             SettingsRepository.KEY_ISLAND_SUPPRESS_SYSTEM_HEADS_UP ->
                 if (running) settings.applyHeadsUpSuppression(settings.isIslandSuppressSystemHeadsUpEnabled())
             in CONFIG_KEYS -> if (running) applyConfig()
@@ -424,6 +497,8 @@ class IslandCoordinator(
     }
 
     private companion object {
+        const val PREVIEW_SOURCE = "preview"
+        const val PREVIEW_KEY = "preview.sample"
         val LAUNCHER_ONLY_KEYS = mapOf(
             "time_battery" to SettingsRepository.KEY_ISLAND_TIME_BATTERY_LAUNCHER_ONLY,
             "weather" to SettingsRepository.KEY_ISLAND_WEATHER_LAUNCHER_ONLY,
@@ -463,3 +538,4 @@ private val IslandTypography = Typography().run {
         titleSmall = titleSmall.copy(fontFamily = IslandFontFamily),
     )
 }
+

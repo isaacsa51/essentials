@@ -495,6 +495,11 @@ class SettingsRepository(
         const val KEY_ISLAND_HIDE_ON_SHADE = "island_hide_on_shade"
         const val KEY_ISLAND_DISMISS_ON_OUTSIDE = "island_dismiss_on_outside"
         const val KEY_ISLAND_CAMERA_POSITION = "island_camera_position"
+        const val KEY_ISLAND_PREVIEW_RING = "island_preview_ring"
+        const val KEY_ISLAND_PREVIEW_STAGE = "island_preview_stage"
+        const val ISLAND_PREVIEW_STAGE_AUTO = "auto"
+        const val ISLAND_PREVIEW_STAGE_PEEK = "peek"
+        const val ISLAND_PREVIEW_STAGE_EXPANDED = "expanded"
         const val KEY_ISLAND_SHOW_CALLS = "island_show_calls"
         const val KEY_ISLAND_SHOW_TIMERS = "island_show_timers"
         const val KEY_ISLAND_SHOW_WEATHER = "island_show_weather"
@@ -3739,6 +3744,13 @@ class SettingsRepository(
     fun getIslandCameraPosition(): String =
         getString(KEY_ISLAND_CAMERA_POSITION, ISLAND_CAMERA_POSITION_CENTER) ?: ISLAND_CAMERA_POSITION_CENTER
     fun setIslandCameraPosition(value: String) = putString(KEY_ISLAND_CAMERA_POSITION, value)
+
+    fun isIslandPreviewRingEnabled(): Boolean = getBoolean(KEY_ISLAND_PREVIEW_RING, false)
+    fun setIslandPreviewRingEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_PREVIEW_RING, enabled)
+
+    fun getIslandPreviewStage(): String =
+        getString(KEY_ISLAND_PREVIEW_STAGE, ISLAND_PREVIEW_STAGE_AUTO) ?: ISLAND_PREVIEW_STAGE_AUTO
+    fun setIslandPreviewStage(value: String) = putString(KEY_ISLAND_PREVIEW_STAGE, value)
 
     fun getIslandExpandedScale(): Float = getFloat(KEY_ISLAND_EXPANDED_SCALE, 1f)
     fun setIslandExpandedScale(value: Float) = putFloat(KEY_ISLAND_EXPANDED_SCALE, value)

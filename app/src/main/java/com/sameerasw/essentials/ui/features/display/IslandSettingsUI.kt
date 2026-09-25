@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.Button
 import android.widget.Toast
 import com.sameerasw.essentials.FeatureSettingsActivity
@@ -234,11 +235,67 @@ fun IslandSettingsUI(
             )
         }
 
+        val previewSettings = remember { SettingsRepository(context) }
+        var previewRing by remember { mutableStateOf(false) }
+        var previewStage by remember { mutableStateOf(SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO) }
+        DisposableEffect(Unit) {
+            onDispose {
+                previewSettings.setIslandPreviewRingEnabled(false)
+                previewSettings.setIslandPreviewStage(SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO)
+            }
+        }
+
         IslandExpandableSection(
             title = stringResource(R.string.island_section_placement),
             iconRes = R.drawable.rounded_center_focus_strong_24,
             initiallyExpanded = highlightSetting in ISLAND_PLACEMENT_KEYS,
         ) {
+            IconToggleItem(
+                iconRes = R.drawable.rounded_circle_24,
+                title = stringResource(R.string.island_preview_ring_title),
+                isChecked = previewRing,
+                onCheckedChange = { checked ->
+                    HapticUtil.performVirtualKeyHaptic(view)
+                    previewRing = checked
+                    previewSettings.setIslandPreviewRingEnabled(checked)
+                },
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceBright, MaterialTheme.shapes.extraSmall)
+                    .padding(top = 12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.island_preview_stage_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                val stages = listOf(
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO,
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_PEEK,
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_EXPANDED,
+                )
+                val stageLabels = mapOf(
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_AUTO to stringResource(R.string.island_preview_stage_auto),
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_PEEK to stringResource(R.string.island_preview_stage_peek),
+                    SettingsRepository.ISLAND_PREVIEW_STAGE_EXPANDED to stringResource(R.string.island_preview_stage_expanded),
+                )
+                SegmentedPicker(
+                    items = stages,
+                    selectedItem = previewStage,
+                    onItemSelected = {
+                        previewStage = it
+                        previewSettings.setIslandPreviewStage(it)
+                    },
+                    labelProvider = { stageLabels[it].orEmpty() },
+                    title = R.string.island_preview_stage_title,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
