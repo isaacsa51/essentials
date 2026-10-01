@@ -180,12 +180,12 @@ fun IslandRoot(
     val dynamicOutline: Color? = if (spec.outlineDynamic) {
         val focused = state.items[state.focusedKey]
         (focused?.outlineAccent ?: focused?.accent)
-            ?: state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.let { it.accent } }
+            ?: state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.let { it.outlineAccent ?: it.accent } }
     } else {
         null
     }
     val animatedOutlineColor: Color? = spec.outlineColor?.let { base ->
-        animateColorAsState(dynamicOutline ?: base, label = "isladOutlineColor").value
+        animateColorAsState(dynamicOutline ?: base, label = "islandOutlineColor").value
     }
 
     val pulse = remember { Animatable(0f) }
