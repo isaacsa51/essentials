@@ -41,6 +41,7 @@ class NotificationsPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_NOTIF_TAP_TO_OPEN,
         SettingsRepository.KEY_ISLAND_SHOW_NOTIFICATIONS,
         SettingsRepository.KEY_ISLAND_NOTIF_CONCEAL_LOCKED,
+        SettingsRepository.KEY_ISLAND_NOTIF_CONCEAL_CHAT_PICTURES,
     )
 
     private val alerts = ArrayDeque<ActiveNotificationAlert>()
@@ -352,8 +353,11 @@ class NotificationsPlugin : BaseIslandPlugin() {
         )
     }
 
+    private fun hidesChatPictures() = settings.getBoolean(SettingsRepository.KEY_ISLAND_NOTIF_CONCEAL_CHAT_PICTURES, false)
+
     private fun concealedItemFor(alert: ActiveNotificationAlert): IslandItem {
-        val icon = alert.appIcon ?: alert.icon
+        val hideChat = hidesChatPictures()
+        val icon = if (hideChat) alert.appIcon ?: alert.icon else alert.chatIcon ?: alert.appIcon ?: alert.icon
         val open = {
             if (!sendPendingIntent(context, alert.contentIntent)) launchPackage(context, alert.packageName)
             popCurrent(reExpand = false)
@@ -362,11 +366,17 @@ class NotificationsPlugin : BaseIslandPlugin() {
             key = ITEM_KEY,
             priority = IslandPriority.NOTIFICATION,
             placement = CompactPlacement.Dynamic,
-            compact = listOf(
-                CompactCell("notif.icon") {
-                    IslandBitmap(icon, 22.dp, fallbackRes = R.drawable.rounded_notifications_unread_24)
-                },
-            ),
+            compact = buildList {
+                add(
+                    CompactCell("notif.icon") {
+                        IslandBitmap(icon, 22.dp, fallbackRes = R.drawable.rounded_notifications_unread_24)
+                    },
+                )
+                val appIcon = alert.appIcon
+                if (!hideChat && alert.chatIcon != null && appIcon != null) {
+                    add(CompactCell("notif.app", soloOnly = true) { IslandBitmap(appIcon, 22.dp, circle = true) })
+                }
+            },
             line = LineContent(
                 icon = { IslandBitmap(icon, 24.dp, fallbackRes = R.drawable.rounded_notifications_unread_24) },
                 start = appNameFor(context, alert),
@@ -385,7 +395,7 @@ class NotificationsPlugin : BaseIslandPlugin() {
     }
 
     private fun stackIconFor(alert: ActiveNotificationAlert, current: Boolean): StackIcon {
-        val icon = if (concealed()) alert.appIcon ?: alert.icon else alert.chatIcon ?: alert.appIcon ?: alert.icon
+        val icon = if (concealed() && hidesChatPictures()) alert.appIcon ?: alert.icon else alert.chatIcon ?: alert.appIcon ?: alert.icon
         return StackIcon(alert.key, current = current, onSelect = { select(alert.key) }) { size ->
             IslandBitmap(icon, size, circle = true, fallbackRes = R.drawable.rounded_notifications_unread_24)
         }

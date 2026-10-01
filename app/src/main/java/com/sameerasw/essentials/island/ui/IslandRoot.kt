@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.animateColorAsState
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
@@ -175,6 +176,18 @@ fun IslandRoot(
         val current = state.items.values.firstNotNullOfOrNull { item -> item.stack.firstOrNull { it.current }?.key }
         "${state.focusedKey}|$current"
     }
+
+    val dynamicOutline: Color? = if (spec.outlineDynamic) {
+        val focused = state.items[state.focusedKey]
+        (focused?.outlineAccent ?: focused?.accent)
+            ?: state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.let { it.accent } }
+    } else {
+        null
+    }
+    val animatedOutlineColor: Color? = spec.outlineColor?.let { base ->
+        animateColorAsState(dynamicOutline ?: base, label = "isladOutlineColor").value
+    }
+
     val pulse = remember { Animatable(0f) }
     val pulsed = remember { arrayOfNulls<Pair<Set<String>, String>>(1) }
     LaunchedEffect(pulseKeys, pulseShown, spec.pulseShadow) {
@@ -548,7 +561,7 @@ fun IslandRoot(
                 }
                 .background(Color.Black)
                 .then(
-                    spec.outlineColor?.takeIf { outlineAlpha > 0f }
+                    animatedOutlineColor?.takeIf { outlineAlpha > 0f }
                         ?.let { Modifier.border(spec.outlineThickness, it.copy(alpha = it.alpha * outlineAlpha), surfaceShape) }
                         ?: Modifier,
                 )

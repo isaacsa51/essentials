@@ -1,7 +1,6 @@
 package com.sameerasw.essentials.weather.model
 
 import androidx.annotation.Keep
-import java.util.Locale
 
 @Keep
 enum class WeatherCondition {
@@ -34,32 +33,36 @@ enum class AlertSeverity {
 enum class TemperatureUnit { CELSIUS, FAHRENHEIT }
 
 @Keep
-data class WeatherLocation(
-    val latitude: Double,
-    val longitude: Double,
-    val name: String? = null,
-) {
-    // ~1km precision is plenty for weather and keeps the exact position off the wire.
-    val query: String get() = "%.2f,%.2f".format(Locale.US, latitude, longitude)
-}
-
-data class CityResult(
-    val name: String,
-    val region: String,
-    val country: String,
-    val latitude: Double,
-    val longitude: Double,
-) {
-    val label: String get() = listOf(name, region, country).filter { it.isNotBlank() }.distinct().joinToString(", ")
-}
-
-@Keep
 data class HourlyForecast(
     val timeMillis: Long,
     val tempC: Double,
     val condition: WeatherCondition,
     val isDay: Boolean,
     val chanceOfRain: Int,
+)
+
+@Keep
+data class DailyForecast(
+    val dayMillis: Long,
+    val highC: Double,
+    val lowC: Double,
+    val condition: WeatherCondition,
+    val chanceOfRain: Int,
+)
+
+// Optional extras; providers fill what they offer and the detail sheet hides the rest.
+@Keep
+data class WeatherExtras(
+    val pressureHpa: Double? = null,
+    val visibilityKm: Double? = null,
+    val dewPointC: Double? = null,
+    val cloudCover: Int? = null,
+    val uvIndex: Double? = null,
+    val windGustKph: Double? = null,
+    val windDirectionDeg: Double? = null,
+    val precipitationMm: Double? = null,
+    val sunriseMillis: Long? = null,
+    val sunsetMillis: Long? = null,
 )
 
 @Keep
@@ -93,16 +96,16 @@ data class WeatherSnapshot(
     val alerts: List<WeatherAlert>,
     val updatedAt: Long,
     val providerId: String,
+    val extras: WeatherExtras? = null,
+    val daily: List<DailyForecast>? = null,
 ) {
     fun activeAlerts(now: Long = System.currentTimeMillis()): List<WeatherAlert> = alerts.filter { it.isActive(now) }
 }
 
 sealed interface WeatherError {
-    data object MissingApiKey : WeatherError
-    data object InvalidApiKey : WeatherError
+    data object OvercastMissing : WeatherError
+    data object OvercastPermission : WeatherError
     data object NoLocation : WeatherError
-    data object LocationPermission : WeatherError
-    data object Network : WeatherError
     data class Unknown(val message: String?) : WeatherError
 }
 

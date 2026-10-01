@@ -3,14 +3,10 @@ package com.sameerasw.essentials.weather
 import android.content.Context
 import androidx.annotation.Keep
 import com.google.gson.Gson
-import com.sameerasw.essentials.data.repository.SettingsRepository
-import com.sameerasw.essentials.weather.location.DeviceLocationSource
 import com.sameerasw.essentials.weather.model.WeatherError
-import com.sameerasw.essentials.weather.model.WeatherLocation
 import com.sameerasw.essentials.weather.model.WeatherSnapshot
 import com.sameerasw.essentials.weather.model.WeatherState
-import com.sameerasw.essentials.weather.provider.WeatherProviderException
-import com.sameerasw.essentials.weather.provider.WeatherProviders
+import com.sameerasw.essentials.weather.overcast.OvercastWeather
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,8 +18,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 object WeatherRepository {
-    private const val CACHE_FILE = "weather_cache.json"
-    private const val MIN_INTERVAL_MS = 5 * 60_000L
+    const val REFRESH_INTERVAL_MINUTES = 30
+
+    private const val CACHE_FILE = "overcast_weather_cache.json"
+    private const val MIN_INTERVAL_MS = 2 * 60_000L
 
     private val gson = Gson()
     private val mutex = Mutex()
@@ -36,11 +34,8 @@ object WeatherRepository {
     @Keep
     private data class WeatherCache(
         val snapshot: WeatherSnapshot? = null,
-        val lastDeviceLocation: WeatherLocation? = null,
         val notifiedAlertIds: Set<String>? = null,
     )
-
-    fun config(context: Context): WeatherConfig = SettingsWeatherConfig(SettingsRepository(context.applicationContext))
 
     suspend fun ensureLoaded(context: Context) {
         if (loaded) return
@@ -59,13 +54,18 @@ object WeatherRepository {
         }
     }
 
-    fun isStale(context: Context): Boolean {
+    fun isStale(): Boolean {
         val snapshot = _state.value.snapshot ?: return true
-        val interval = config(context).refreshIntervalMinutes * 60_000L
-        return System.currentTimeMillis() - snapshot.updatedAt >= interval
+        return System.currentTimeMillis() - snapshot.updatedAt >= REFRESH_INTERVAL_MINUTES * 60_000L
     }
 
-    // Returns true when fresh data was stored.
+    private suspend fun dropSnapshot(app: Context, error: WeatherError) {
+        cache = cache.copy(snapshot = null)
+        persist(app)
+        _state.value = WeatherState(error = error)
+    }
+
+    // Returns true when newer data was stored. A forced refresh asks Overcast to fetch first.
     suspend fun refresh(context: Context, force: Boolean = false): Boolean {
         val app = context.applicationContext
         ensureLoaded(app)
@@ -74,50 +74,46 @@ object WeatherRepository {
             if (!force && current != null && System.currentTimeMillis() - current.updatedAt < MIN_INTERVAL_MS) {
                 return@withLock false
             }
-            val config = config(app)
-            val provider = WeatherProviders.byId(config.providerId)
-            if (provider.requiresApiKey && config.apiKey.isNullOrBlank()) {
-                _state.update { it.copy(error = WeatherError.MissingApiKey, loading = false) }
+            if (!OvercastWeather.isInstalled(app)) {
+                dropSnapshot(app, WeatherError.OvercastMissing)
+                return@withLock false
+            }
+            if (!OvercastWeather.hasPermission(app)) {
+                dropSnapshot(app, WeatherError.OvercastPermission)
                 return@withLock false
             }
             _state.update { it.copy(loading = true) }
-            val location = resolveLocation(app, config)
-            if (location == null) {
-                val error = if (config.locationMode == WeatherLocationMode.DEVICE && !DeviceLocationSource.hasPermission(app)) {
-                    WeatherError.LocationPermission
-                } else {
-                    WeatherError.NoLocation
-                }
-                _state.update { it.copy(error = error, loading = false) }
+            if (force) OvercastWeather.requestRefresh(app)
+            val snapshot = OvercastWeather.fetch(app)
+            if (snapshot == null) {
+                _state.update { it.copy(error = WeatherError.NoLocation, loading = false) }
                 return@withLock false
             }
-            try {
-                val snapshot = provider.fetch(location, config.apiKey)
-                cache = cache.copy(snapshot = snapshot)
-                persist(app)
-                _state.value = WeatherState(snapshot = snapshot)
-                true
-            } catch (e: WeatherProviderException) {
-                val error = when (e.reason) {
-                    WeatherProviderException.Reason.INVALID_KEY -> WeatherError.InvalidApiKey
-                    WeatherProviderException.Reason.NETWORK -> WeatherError.Network
-                    WeatherProviderException.Reason.BAD_RESPONSE -> WeatherError.Unknown(e.message)
-                }
-                _state.update { it.copy(error = error, loading = false) }
-                false
-            } catch (e: Exception) {
-                _state.update { it.copy(error = WeatherError.Unknown(e.message), loading = false) }
-                false
-            }
+            val changed = snapshot.updatedAt != current?.updatedAt
+            cache = cache.copy(snapshot = snapshot)
+            persist(app)
+            _state.value = WeatherState(snapshot = snapshot)
+            changed
         }
     }
 
-    suspend fun clear(context: Context) {
-        ensureLoaded(context)
+    // Pulls whatever Overcast has stored, without asking it to fetch. Used when Overcast reports a change.
+    suspend fun sync(context: Context) {
+        val app = context.applicationContext
+        ensureLoaded(app)
+        if (!OvercastWeather.isAvailable(app)) {
+            mutex.withLock {
+                val error = if (OvercastWeather.isInstalled(app)) WeatherError.OvercastPermission else WeatherError.OvercastMissing
+                if (_state.value.snapshot != null || _state.value.error != error) dropSnapshot(app, error)
+            }
+            return
+        }
+        val snapshot = OvercastWeather.fetch(app) ?: return
         mutex.withLock {
-            cache = cache.copy(snapshot = null)
-            persist(context.applicationContext)
-            _state.value = WeatherState()
+            if (snapshot.updatedAt == _state.value.snapshot?.updatedAt) return@withLock
+            cache = cache.copy(snapshot = snapshot)
+            persist(app)
+            _state.value = WeatherState(snapshot = snapshot)
         }
     }
 
@@ -135,20 +131,6 @@ object WeatherRepository {
             fresh
         }
     }
-
-    private suspend fun resolveLocation(context: Context, config: WeatherConfig): WeatherLocation? =
-        when (config.locationMode) {
-            WeatherLocationMode.MANUAL -> config.manualLocation
-            WeatherLocationMode.DEVICE -> {
-                val fresh = DeviceLocationSource.current(context)
-                if (fresh != null) {
-                    cache = cache.copy(lastDeviceLocation = fresh)
-                    fresh
-                } else {
-                    cache.lastDeviceLocation.takeIf { DeviceLocationSource.hasPermission(context) }
-                }
-            }
-        }
 
     private suspend fun persist(context: Context) = withContext(Dispatchers.IO) {
         try {

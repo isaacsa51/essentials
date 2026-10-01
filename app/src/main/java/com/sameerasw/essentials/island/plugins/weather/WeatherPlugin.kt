@@ -3,6 +3,8 @@ package com.sameerasw.essentials.island.plugins.weather
 import com.sameerasw.essentials.island.plugins.brief.BriefPlugin
 import com.sameerasw.essentials.island.model.InteractionOverrides
 import com.sameerasw.essentials.utils.DeviceUtils
+import android.content.Context
+import android.database.ContentObserver
 import android.text.format.DateFormat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
@@ -20,6 +22,7 @@ import com.sameerasw.essentials.island.ui.components.IslandIcon
 import com.sameerasw.essentials.island.ui.components.RollingText
 import com.sameerasw.essentials.weather.WeatherFormat
 import com.sameerasw.essentials.weather.WeatherRepository
+import com.sameerasw.essentials.weather.overcast.OvercastWeather
 import com.sameerasw.essentials.weather.model.WeatherState
 import com.sameerasw.essentials.weather.work.WeatherScheduler
 import kotlinx.coroutines.Job
@@ -35,22 +38,21 @@ class WeatherPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_SHOW_WEATHER,
         SettingsRepository.KEY_ISLAND_WEATHER_MODE,
         SettingsRepository.KEY_ISLAND_WEATHER_PEEK_ALERTS,
-        SettingsRepository.KEY_WEATHER_PROVIDER,
-        SettingsRepository.KEY_WEATHER_API_KEY,
-        SettingsRepository.KEY_WEATHER_LOCATION_MODE,
-        SettingsRepository.KEY_WEATHER_MANUAL_LOCATION,
         SettingsRepository.KEY_WEATHER_UNITS,
         SettingsRepository.KEY_ISLAND_WEATHER_EFFECTS,
         SettingsRepository.KEY_ISLAND_WEATHER_HAPTICS,
-        SettingsRepository.KEY_WEATHER_REFRESH_MINUTES,
     )
 
     private var observer: Job? = null
-    private var sourceSignature: String? = null
+    private var overcastObserver: ContentObserver? = null
     private var state = WeatherState()
 
     override fun onStart() {
         val c = ctx!!
+        overcastObserver = OvercastWeather.observe(context) {
+            c.scope.launch { WeatherRepository.sync(context) }
+        }
+        c.scope.launch { WeatherRepository.sync(context) }
         observer = c.scope.launch {
             WeatherRepository.ensureLoaded(context)
             WeatherRepository.state.collect { next ->
@@ -62,6 +64,8 @@ class WeatherPlugin : BaseIslandPlugin() {
     }
 
     override fun onStop() {
+        overcastObserver?.let { OvercastWeather.stopObserving(context, it) }
+        overcastObserver = null
         observer?.cancel()
         observer = null
     }
@@ -70,21 +74,13 @@ class WeatherPlugin : BaseIslandPlugin() {
         val c = ctx ?: return
         if (!settings.isIslandShowWeatherEnabled()) {
             WeatherScheduler.cancel(context)
-            sourceSignature = null
             render()
             return
         }
-        WeatherScheduler.schedule(context, settings.getWeatherRefreshMinutes())
-        val signature = listOf(
-            settings.getWeatherProvider(),
-            settings.getWeatherApiKey(),
-            settings.getWeatherLocationMode(),
-            settings.getWeatherManualLocation()?.toString(),
-        ).joinToString("|")
-        val sourceChanged = sourceSignature != null && sourceSignature != signature
-        sourceSignature = signature
-        if (sourceChanged || WeatherRepository.isStale(context)) {
-            c.scope.launch { WeatherRepository.refresh(context, force = sourceChanged) }
+        WeatherScheduler.schedule(context, WeatherRepository.REFRESH_INTERVAL_MINUTES)
+        c.scope.launch {
+            WeatherRepository.sync(context)
+            if (WeatherRepository.isStale()) WeatherRepository.refresh(context, force = true)
         }
         render()
     }
@@ -159,6 +155,8 @@ class WeatherPlugin : BaseIslandPlugin() {
                             if (brief) ctx?.request?.invoke(PluginRequest.Expand(BriefPlugin.ITEM_KEY))
                         }
                     },
+                    onLongPress = { openWeatherDetails(context) },
+                    onExpandedTap = { openWeatherDetails(context); true },
                 ),
                 compactVisible = compactVisible,
             ),
@@ -172,5 +170,12 @@ class WeatherPlugin : BaseIslandPlugin() {
 
     companion object {
         const val ITEM_KEY = "weather"
+    }
+}
+
+fun openWeatherDetails(context: Context) {
+    try {
+        if (OvercastWeather.isInstalled(context)) OvercastWeather.openApp(context) else OvercastWeather.openInstallPage(context)
+    } catch (_: Exception) {
     }
 }

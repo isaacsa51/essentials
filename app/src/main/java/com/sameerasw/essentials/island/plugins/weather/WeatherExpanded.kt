@@ -1,6 +1,13 @@
 package com.sameerasw.essentials.island.plugins.weather
 
 import android.content.Context
+import kotlinx.coroutines.delay
+import com.sameerasw.essentials.weather.WeatherSources
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.LaunchedEffect
+import android.text.format.DateUtils
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -170,11 +177,9 @@ private fun WeatherContent(
 @Composable
 private fun errorText(error: WeatherError?): String = stringResource(
     when (error) {
-        WeatherError.MissingApiKey -> R.string.weather_error_missing_key
-        WeatherError.InvalidApiKey -> R.string.weather_error_invalid_key
-        WeatherError.LocationPermission -> R.string.weather_error_location_permission
+        WeatherError.OvercastMissing -> R.string.weather_error_overcast_missing
+        WeatherError.OvercastPermission -> R.string.weather_error_overcast_permission
         WeatherError.NoLocation -> R.string.weather_error_no_location
-        WeatherError.Network -> R.string.weather_error_network
         is WeatherError.Unknown, null -> R.string.weather_error_unknown
     },
 )
@@ -260,14 +265,39 @@ private fun UpdatedRow(
     onRefresh: () -> Unit,
 ) {
     val context = LocalContext.current
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(snapshot.updatedAt) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(30_000L)
+        }
+    }
+    val age = DateUtils.getRelativeTimeSpanString(
+        snapshot.updatedAt,
+        maxOf(now, snapshot.updatedAt),
+        DateUtils.MINUTE_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE,
+    ).toString()
+    val provider = WeatherSources.displayName(snapshot.providerId)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = if (error != null) errorText(error) else stringResource(R.string.weather_updated_at, formatTime(context, snapshot.updatedAt)),
-            style = IslandTextStyles.body.copy(fontSize = 11.sp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        if (error != null) {
+            Text(
+                text = errorText(error),
+                style = IslandTextStyles.body.copy(fontSize = 11.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Text(
+                text = "$provider - $age",
+                style = IslandTextStyles.body.copy(fontSize = 11.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
         if (loading) {
             LoadingIndicator(Modifier.size(28.dp))
         } else {

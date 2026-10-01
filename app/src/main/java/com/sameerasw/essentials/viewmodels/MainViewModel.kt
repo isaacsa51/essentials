@@ -76,6 +76,7 @@ import com.sameerasw.essentials.utils.AppIconUtil
 import com.sameerasw.essentials.utils.AppUtil
 import com.sameerasw.essentials.utils.DeviceUtils
 import com.sameerasw.essentials.utils.PermissionUtils
+import com.sameerasw.essentials.weather.overcast.OvercastWeather
 import com.sameerasw.essentials.utils.RefreshRateUtils
 import com.sameerasw.essentials.utils.RootUtils
 import com.sameerasw.essentials.utils.ShellUtils
@@ -202,6 +203,7 @@ class MainViewModel : ViewModel() {
     val isIslandTimersShowScreenRecorder = mutableStateOf(true)
     val isIslandShowNetwork = mutableStateOf(true)
     val isIslandShowSoundMode = mutableStateOf(true)
+    val isIslandSoundModeKeepIcon = mutableStateOf(true)
     val isIslandShowAlarm = mutableStateOf(false)
     val islandAlarmWindowHours = mutableIntStateOf(12)
     val isIslandShowTravel = mutableStateOf(true)
@@ -233,6 +235,7 @@ class MainViewModel : ViewModel() {
     val isIslandShowGlow = mutableStateOf(true)
     val isIslandBorderOutline = mutableStateOf(false)
     val islandBorderOutlineColor = mutableStateOf(SettingsRepository.ISLAND_BORDER_OUTLINE_DEFAULT_COLOR)
+    val isIslandBorderOutlineDynamic = mutableStateOf(false)
     val islandBorderOutlineThickness = mutableFloatStateOf(1f)
     val isIslandBorderOutlineHiddenWhenExpanded = mutableStateOf(false)
     val isIslandPulseShadow = mutableStateOf(false)
@@ -307,6 +310,7 @@ class MainViewModel : ViewModel() {
     val isFlashlightPocketTurnOffEnabled = mutableStateOf(false)
     val isFlashlightOverheatEnabled = mutableStateOf(true)
     val isLocationPermissionGranted = mutableStateOf(false)
+    val isOvercastWeatherPermissionGranted = mutableStateOf(false)
     val isBackgroundLocationPermissionGranted = mutableStateOf(false)
     val isFullScreenIntentPermissionGranted = mutableStateOf(false)
     val isBluetoothPermissionGranted = mutableStateOf(false)
@@ -1851,6 +1855,7 @@ class MainViewModel : ViewModel() {
             PermissionUtils.isNotificationLightingAccessibilityServiceEnabled(context)
         isDefaultBrowserSet.value = PermissionUtils.isDefaultBrowser(context)
         isLocationPermissionGranted.value = PermissionUtils.hasLocationPermission(context)
+        isOvercastWeatherPermissionGranted.value = OvercastWeather.hasPermission(context)
         isBackgroundLocationPermissionGranted.value =
             PermissionUtils.hasBackgroundLocationPermission(context)
         isFullScreenIntentPermissionGranted.value = PermissionUtils.canUseFullScreenIntent(context)
@@ -2252,6 +2257,7 @@ class MainViewModel : ViewModel() {
         isIslandTimersShowScreenRecorder.value = settingsRepository.isIslandTimersShowScreenRecorderEnabled()
         isIslandShowNetwork.value = settingsRepository.isIslandShowNetworkEnabled()
         isIslandShowSoundMode.value = settingsRepository.isIslandShowSoundModeEnabled()
+        isIslandSoundModeKeepIcon.value = settingsRepository.isIslandSoundModeKeepIconEnabled()
         isIslandShowAlarm.value = settingsRepository.isIslandShowAlarmEnabled()
         islandAlarmWindowHours.intValue = settingsRepository.getIslandAlarmWindowHours()
         isIslandShowTravel.value = settingsRepository.isIslandShowTravelEnabled()
@@ -2290,6 +2296,7 @@ class MainViewModel : ViewModel() {
         isIslandShowGlow.value = settingsRepository.isIslandShowGlowEnabled()
         isIslandBorderOutline.value = settingsRepository.isIslandBorderOutlineEnabled()
         islandBorderOutlineColor.value = settingsRepository.getIslandBorderOutlineColor()
+        isIslandBorderOutlineDynamic.value = settingsRepository.isIslandBorderOutlineDynamicEnabled()
         islandBorderOutlineThickness.floatValue = settingsRepository.getIslandBorderOutlineThickness()
         isIslandBorderOutlineHiddenWhenExpanded.value = settingsRepository.isIslandBorderOutlineHiddenWhenExpanded()
         isIslandPulseShadow.value = settingsRepository.isIslandPulseShadowEnabled()
@@ -5304,6 +5311,11 @@ class MainViewModel : ViewModel() {
         settingsRepository.setIslandShowSoundModeEnabled(enabled)
     }
 
+    fun setIslandSoundModeKeepIcon(enabled: Boolean) {
+        isIslandSoundModeKeepIcon.value = enabled
+        settingsRepository.setIslandSoundModeKeepIconEnabled(enabled)
+    }
+
     fun setIslandShowNetwork(enabled: Boolean) {
         isIslandShowNetwork.value = enabled
         settingsRepository.setIslandShowNetworkEnabled(enabled)
@@ -5499,6 +5511,11 @@ class MainViewModel : ViewModel() {
     fun setIslandBorderOutlineColor(colorHex: String) {
         islandBorderOutlineColor.value = colorHex
         settingsRepository.setIslandBorderOutlineColor(colorHex)
+    }
+
+    fun setIslandBorderOutlineDynamic(enabled: Boolean) {
+        isIslandBorderOutlineDynamic.value = enabled
+        settingsRepository.setIslandBorderOutlineDynamicEnabled(enabled)
     }
 
     fun setIslandBorderOutlineThickness(value: Float) {
@@ -7556,6 +7573,19 @@ class MainViewModel : ViewModel() {
             activity,
             arrayOf(Manifest.permission.READ_PHONE_STATE),
             1001,
+        )
+    }
+
+    /**
+     * Executes the request Overcast weather permission operation.
+     *
+     * @param activity [androidx.activity.ComponentActivity] Target activity.
+     */
+    fun requestOvercastWeatherPermission(activity: androidx.activity.ComponentActivity) {
+        androidx.core.app.ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(OvercastWeather.PERMISSION),
+            1007,
         )
     }
 
