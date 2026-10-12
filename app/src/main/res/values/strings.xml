@@ -1200,6 +1200,8 @@
     <string name="tile_restart_systemui">SystemUI Restart</string>
     <string name="tile_restart_systemui_subtitle_restart">Now</string>
     <string name="about_desc_restart_systemui_tile">Easily restart SystemUI directly from your Quick Settings panel. Helpful to quickly resolve status bar glitches or apply system UI modifications immediately. Requires root or Shizuku shell access.</string>
+    <string name="tile_demo_mode">Demo mode</string>
+    <string name="about_desc_demo_mode_tile">Toggle SystemUI demo mode for clean screenshots and screen recordings. Shows a fixed 12:00 clock, full signal and battery, and hides notification and status icons. Requires root or Shizuku shell access.</string>
     <string name="msg_error_load_release_notes">Couldn\'t load the release note</string>
     <string name="action_view_on_web">View on web</string>
 

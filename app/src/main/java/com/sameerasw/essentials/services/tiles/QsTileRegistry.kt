@@ -105,6 +105,10 @@ object QsTileRegistry {
                 RestartSystemUiTileService::class.java,
             ),
             QsTileEntry(
+                R.drawable.rounded_screenshot_region_24,
+                DemoModeTileService::class.java,
+            ),
+            QsTileEntry(
                 R.drawable.rounded_shutter_speed_24,
                 RefreshRateTileService::class.java,
             ),

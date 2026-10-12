@@ -22,6 +22,7 @@ import com.sameerasw.essentials.services.tiles.CaffeinateTileService
 import com.sameerasw.essentials.services.tiles.ChargeQuickTileService
 import com.sameerasw.essentials.services.tiles.ColorPickerTileService
 import com.sameerasw.essentials.services.tiles.DataSimTileService
+import com.sameerasw.essentials.services.tiles.DemoModeTileService
 import com.sameerasw.essentials.services.tiles.DeveloperOptionsTileService
 import com.sameerasw.essentials.services.tiles.DuoTileService
 import com.sameerasw.essentials.services.tiles.DynamicNightLightTileService
@@ -279,6 +280,14 @@ object QSTileRegistry {
                 RestartSystemUiTileService::class.java,
                 if (ShellUtils.isRootEnabled(context)) listOf("ROOT") else listOf("SHIZUKU"),
                 R.string.about_desc_restart_systemui_tile,
+                R.string.cat_utils,
+            ),
+            QSTileInfo(
+                R.string.tile_demo_mode,
+                R.drawable.rounded_screenshot_region_24,
+                DemoModeTileService::class.java,
+                if (ShellUtils.isRootEnabled(context)) listOf("ROOT") else listOf("SHIZUKU"),
+                R.string.about_desc_demo_mode_tile,
                 R.string.cat_utils,
             ),
             QSTileInfo(
