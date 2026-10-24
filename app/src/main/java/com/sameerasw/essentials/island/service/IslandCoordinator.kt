@@ -728,7 +728,6 @@ class IslandCoordinator(
         controller.maxCells = settings.getIslandMaxItems() * 2
         controller.balanceCompact = settings.isIslandBalanceCompactEnabled()
         controller.secondaryBubbleEnabled = settings.isIslandSecondaryBubbleEnabled()
-        controller.secondaryBubbleOverlap = settings.getIslandNotifQueueStyle() == SettingsRepository.ISLAND_NOTIF_QUEUE_STYLE_OVERLAP
         controller.relayout()
         controller.expandedTimeoutMs = settings.getIslandExpandedTimeoutMs()
         applyPreviewRing()
@@ -822,6 +821,7 @@ class IslandCoordinator(
             "alarm" to SettingsRepository.KEY_ISLAND_ALARM_LAUNCHER_ONLY,
         )
         val CONFIG_KEYS = setOf(
+            SettingsRepository.KEY_ISLAND_MONOCHROME,
             SettingsRepository.KEY_ISLAND_NOTIF_QUEUE_STYLE,
             SettingsRepository.KEY_ISLAND_NOTIF_QUEUE_INLINE,
             SettingsRepository.KEY_ISLAND_USE_AUTO_DETECT,

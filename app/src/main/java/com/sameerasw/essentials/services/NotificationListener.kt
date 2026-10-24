@@ -2315,6 +2315,11 @@ class NotificationListener : NotificationListenerService() {
             bitmap = appIcon
         }
 
+        var smallIconBitmap: Bitmap? = null
+        try {
+            notif.smallIcon?.loadDrawable(this)?.let { smallIconBitmap = AppUtil.drawableToBitmap(it) }
+        } catch (_: Exception) {}
+
         var appColor: Int? = null
         if (notif.color != 0 && notif.color != android.graphics.Color.TRANSPARENT) {
             appColor = notif.color
@@ -2365,6 +2370,7 @@ class NotificationListener : NotificationListenerService() {
             appIcon = appIcon,
             actions = actionList,
             chatIcon = chatIcon,
+            smallIcon = smallIconBitmap,
         )
     }
 
