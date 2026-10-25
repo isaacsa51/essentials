@@ -1,10 +1,17 @@
 package com.sameerasw.essentials.island.plugins.calendar
 
+import com.sameerasw.essentials.island.ui.components.islandAccent
+
+import com.sameerasw.essentials.island.IslandTimeFormat
 import android.app.KeyguardManager
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.provider.CalendarContract
+import android.text.format.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
 import com.sameerasw.essentials.data.repository.SettingsRepository
@@ -31,6 +38,10 @@ class CalendarPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_CALENDAR_EMOJIS,
         SettingsRepository.KEY_ISLAND_CALENDAR_PRIORITY_MINUTES,
         SettingsRepository.KEY_ISLAND_CALENDAR_HIDE_LOCKED,
+        SettingsRepository.KEY_ISLAND_CALENDAR_COMPACT_TIME,
+        SettingsRepository.KEY_ISLAND_TIME_FORMAT,
+        SettingsRepository.KEY_ISLAND_TIME_LEADING_ZERO,
+        SettingsRepository.KEY_ISLAND_TIME_PERIOD,
     )
 
     private var event: UpcomingCalendarEvent? = null
@@ -80,7 +91,11 @@ class CalendarPlugin : BaseIslandPlugin() {
         }
         val now = System.currentTimeMillis()
         val full = CalendarEventUtil.formatRelativeTime(context, e.startTimeMillis, now)
-        val short = CalendarEventUtil.formatRelativeTimeCompact(e.startTimeMillis, now)
+        val short = if (settings.getBoolean(SettingsRepository.KEY_ISLAND_CALENDAR_COMPACT_TIME, false) && e.startTimeMillis - now >= 60 * 60_000L) {
+            IslandTimeFormat.format(context, settings, e.startTimeMillis, period = false)
+        } else {
+            CalendarEventUtil.formatRelativeTimeCompact(e.startTimeMillis, now)
+        }
         val showGlow = settings.isIslandShowGlowEnabled()
         val emoji = settings.getIslandCalendarEmojis()[e.calendarId]
         val priorityMs = settings.getIslandCalendarPriorityMinutes() * 60_000L
@@ -93,11 +108,11 @@ class CalendarPlugin : BaseIslandPlugin() {
                 bypassLauncherOnly = urgent,
                 placement = CompactPlacement.Dynamic,
                 compact = listOf(
-                    CompactCell("cal.icon") { CalendarGlyph(emoji, size = 18.dp, tint = MaterialTheme.colorScheme.primary) },
+                    CompactCell("cal.icon") { CalendarGlyph(emoji, size = 18.dp, tint = islandAccent()) },
                     CompactCell("cal.time") { RollingText(short) },
                 ),
                 line = LineContent(
-                    icon = { CalendarGlyph(emoji, size = 20.dp, tint = MaterialTheme.colorScheme.primary) },
+                    icon = { CalendarGlyph(emoji, size = 20.dp, tint = islandAccent()) },
                     start = e.title,
                     end = full,
                 ),

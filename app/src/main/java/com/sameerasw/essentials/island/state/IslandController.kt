@@ -38,6 +38,7 @@ class IslandController(
 
     var maxCells: Int = CompactLayoutEngine.MAX_CELLS
     var balanceCompact: Boolean = true
+    var chipsEnabled: Boolean = false
     var secondaryBubbleEnabled: Boolean = true
     var secondaryBubbleOverlap: Boolean = false
     private var feedbackActive = false
@@ -306,6 +307,7 @@ class IslandController(
                     item.compact.filter { it.soloOnly }.map { it.key },
                     item.needsCompanyAtCenter,
                     item.companionOnly,
+                    chipsEnabled && item.chip,
                 )
             },
             anchorProvider(),

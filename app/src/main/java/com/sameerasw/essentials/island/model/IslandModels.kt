@@ -7,6 +7,8 @@ import com.sameerasw.essentials.island.ui.IslandLayoutSpec
 
 enum class IslandStage { Hidden, Compact, Line, Expanded }
 
+enum class QueueOverflow { Number, Dot, None }
+
 enum class CompactPlacement { Pinned, Dynamic }
 
 // Island item priority
@@ -100,6 +102,7 @@ class SideBubble(
     val whenOccupiedOnly: Boolean = false,
     val onDismiss: (() -> Unit)? = null,
     val maxIcons: Int? = null,
+    val overflow: QueueOverflow = QueueOverflow.Number,
     // Compact cells' worth of room the bubble takes beside the camera
     val cells: Int = 1,
 )
@@ -107,6 +110,12 @@ class SideBubble(
 object SideBubblePriority {
     const val NOTIFICATION = 0
     const val PROGRESS = 10
+}
+
+object IslandChips {
+    val items = setOf(
+        "media", "calendar", "timer", "alarm", "caffeinate", "flashlight", "sound_mode", "devices", "travel", "navigation", "call",
+    )
 }
 
 class QueueInfo(
@@ -144,6 +153,8 @@ class IslandItem(
     val stack: List<StackIcon> = emptyList(),
     val queued: List<StackIcon>? = null,
     val priorityGroup: String? = null,
+    // Rendered inside a colored chip when Island chips is enabled.
+    val chip: Boolean = key in IslandChips.items,
 ) {
     var userPriority: Int? = null
 
@@ -172,6 +183,7 @@ class IslandItem(
         stack = stack,
         queued = queued,
         priorityGroup = priorityGroup,
+        chip = chip,
     ).also { it.userPriority = userPriority }
 
     val effectivePriority: Int get() = priorityOverride ?: userPriority ?: priority
