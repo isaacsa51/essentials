@@ -125,10 +125,15 @@ class IslandCoordinator(
 
     private val latestItems = HashMap<String, List<IslandItem>>()
     private var userPriorities: Map<String, Int> = emptyMap()
+    private var bubbleGroups: Set<String> = emptySet()
 
     private fun publishItems(pluginId: String, items: List<IslandItem>) {
         latestItems[pluginId] = items
-        items.forEach { it.userPriority = userPriorities[it.priorityGroup ?: pluginId] }
+        items.forEach {
+            val group = it.priorityGroup ?: pluginId
+            it.userPriority = userPriorities[group]
+            it.inBubble = group in bubbleGroups
+        }
         controller.setItems(pluginId, items)
     }
 
@@ -137,6 +142,8 @@ class IslandCoordinator(
 
     private fun reloadPriorities() {
         userPriorities = resolvePriorities()
+        val marked = settings.getIslandBubbleItems()
+        bubbleGroups = IslandPriorityEntries.all.filter { it.id in marked }.flatMap { it.pluginIds }.toSet()
         latestItems.toMap().forEach { (id, items) -> publishItems(id, items) }
     }
 
@@ -228,6 +235,11 @@ class IslandCoordinator(
         }
 
         override fun onAdvance(): Boolean = controller.advanceFocused()
+
+        override fun onBubbleMeasured(cells: Int) = controller.setBubbleCells(cells)
+
+        override fun onCompactUnitMeasured(itemKey: String, unitKey: String, cells: Float) =
+            controller.setUnitWidth(itemKey, unitKey, cells)
 
         override fun onOpenFocused() {
             controller.state.value.focused?.onOpen?.invoke()
@@ -756,9 +768,18 @@ class IslandCoordinator(
         controller.maxCells = settings.getIslandMaxItems() * 2
         compactMaxWidthPx = (lineWidth * density).toInt()
         applyStatusBarAwareWidth()
+        controller.maxItems = settings.getIslandMaxItems()
         controller.balanceCompact = settings.isIslandBalanceCompactEnabled()
+        controller.balanceMirror = settings.isIslandBalanceMirrorEnabled()
         controller.chipsEnabled = settings.getBoolean(SettingsRepository.KEY_ISLAND_CHIPS, false)
+        controller.bubbleMax = settings.getIslandBubbleMax()
         controller.secondaryBubbleEnabled = settings.isIslandSecondaryBubbleEnabled()
+        val gapDp = geo.gap / density
+        controller.widthBudget = if (geo.anchor == CameraAnchor.Center) {
+            (screenWidthDp - 16f - slotDp - gapDp * 2f) / (geo.diameter / density + gapDp)
+        } else {
+            Float.MAX_VALUE
+        }
         controller.relayout()
         controller.expandedTimeoutMs = settings.getIslandExpandedTimeoutMs()
         applyPreviewRing()
@@ -863,7 +884,7 @@ class IslandCoordinator(
 
     private fun complicationCount(state: IslandUiState): Int =
         state.arrangement.visibleItems.count { state.items[it]?.placement == CompactPlacement.Dynamic } +
-            if (state.sideBubble != null) 1 else 0
+            (if (state.sideBubble != null) 1 else 0) + state.bubbleKeys.size
 
     private fun syncStatusBar() {
         val dynamic = settings.getBoolean(SettingsRepository.KEY_ISLAND_DYNAMIC_HIDE_STATUS_BAR, false)
@@ -903,7 +924,8 @@ class IslandCoordinator(
             SettingsRepository.KEY_ISLAND_HIDE_PORTRAIT,
             SettingsRepository.KEY_ISLAND_HIDE_LANDSCAPE -> updateState()
             SettingsRepository.KEY_ISLAND_ALWAYS_GESTURES -> syncGestureHitbox()
-            SettingsRepository.KEY_ISLAND_PRIORITY_ORDER, SettingsRepository.KEY_ISLAND_PROVIDERS -> if (running) reloadPriorities()
+            SettingsRepository.KEY_ISLAND_PRIORITY_ORDER, SettingsRepository.KEY_ISLAND_PROVIDERS,
+            SettingsRepository.KEY_ISLAND_BUBBLE_ITEMS -> if (running) reloadPriorities()
             SettingsRepository.KEY_ISLAND_DYNAMIC_HIDE_STATUS_BAR, SettingsRepository.KEY_ISLAND_COMPACT_HIDE_STATUS_BAR,
             SettingsRepository.KEY_ISLAND_HIDE_ICONS_ENABLED, SettingsRepository.KEY_ISLAND_HIDE_ICONS -> syncStatusBar()
             SettingsRepository.KEY_ISLAND_HIDE_WHEN_SCREEN_OFF, SettingsRepository.KEY_ISLAND_SHOW_WHEN -> applySuppression()
@@ -978,10 +1000,12 @@ class IslandCoordinator(
             SettingsRepository.KEY_ISLAND_LANDSCAPE_TOP_SPACING,
             SettingsRepository.KEY_ISLAND_BOND_EDGE,
             SettingsRepository.KEY_ISLAND_BALANCE_COMPACT,
+            SettingsRepository.KEY_ISLAND_BALANCE_MIRROR,
             SettingsRepository.KEY_ISLAND_SECONDARY_BUBBLE,
             SettingsRepository.KEY_ISLAND_MAX_ITEMS,
             SettingsRepository.KEY_ISLAND_STATUSBAR_AWARE_WIDTH,
             SettingsRepository.KEY_ISLAND_STATUSBAR_IGNORE_NOTIFICATIONS,
+            SettingsRepository.KEY_ISLAND_BUBBLE_MAX,
         )
         private const val STATUS_BAR_POLL_MS = 1000L
         private const val STATUS_BAR_MARGIN_DP = 10f

@@ -1060,6 +1060,11 @@ object FeatureRegistry {
                             "island_balance_compact",
                         ),
                         SearchSetting(
+                            R.string.island_balance_mirror_title,
+                            R.string.island_section_behavior,
+                            "island_balance_mirror",
+                        ),
+                        SearchSetting(
                             R.string.island_tap_to_open_expanded_title,
                             R.string.island_section_behavior,
                             "island_tap_to_open_expanded",

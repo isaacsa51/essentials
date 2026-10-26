@@ -142,8 +142,8 @@ class NavigationPlugin : BaseIslandPlugin() {
                 priority = IslandPriority.NAVIGATION,
                 placement = CompactPlacement.Dynamic,
                 compact = listOfNotNull(
-                    d.distance?.let { CompactCell("navigation.distance") { RollingText(it) } },
                     CompactCell("navigation.maneuver") { Maneuver(d, 18) },
+                    d.distance?.let { CompactCell("navigation.distance") { RollingText(it) } },
                 ),
                 line = LineContent(
                     icon = { Maneuver(d, 20) },

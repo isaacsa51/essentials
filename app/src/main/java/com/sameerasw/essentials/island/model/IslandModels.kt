@@ -116,9 +116,7 @@ class SideBubble(
 
 object SideBubblePriority {
     const val NOTIFICATION = 0
-    const val PROGRESS = 10
 }
-
 object IslandChips {
     val items = setOf(
         "media", "calendar", "timer", "alarm", "caffeinate", "flashlight", "sound_mode", "devices", "travel", "navigation", "call",
@@ -167,6 +165,8 @@ class IslandItem(
 ) {
     var userPriority: Int? = null
 
+    var inBubble: Boolean = false
+
     fun withInlineBubble(cell: CompactCell) = IslandItem(
         key = key,
         priority = priority,
@@ -195,7 +195,10 @@ class IslandItem(
         queued = queued,
         priorityGroup = priorityGroup,
         chip = chip,
-    ).also { it.userPriority = userPriority }
+    ).also {
+        it.userPriority = userPriority
+        it.inBubble = inBubble
+    }
 
     val effectivePriority: Int get() = priorityOverride ?: userPriority ?: priority
 
