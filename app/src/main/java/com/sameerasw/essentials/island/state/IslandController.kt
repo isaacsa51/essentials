@@ -388,6 +388,7 @@ class IslandController(
                     item.needsCompanyAtCenter,
                     item.companionOnly,
                     chipsEnabled && item.chip,
+                    item.compactEndSide,
                 )
             }
         val sideExtra = bubbleOwner?.sideBubble?.cells?.coerceAtLeast(1) ?: 0
@@ -405,6 +406,8 @@ class IslandController(
                 Float.MAX_VALUE
             },
             widthOf = ::widthOf,
+            sideMax = widthBudget / 2f - BUBBLE_ROOM,
+            endExtra = endCells,
             fits = compactFits?.let { fits ->
                 val extra = bubbleOwner?.sideBubble?.cells?.coerceAtLeast(1) ?: 0
                 val shown = (_state.value.arrangement.before + _state.value.arrangement.after).toSet()

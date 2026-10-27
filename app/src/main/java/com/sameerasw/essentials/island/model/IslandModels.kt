@@ -162,6 +162,8 @@ class IslandItem(
     val priorityGroup: String? = null,
     // Rendered inside a colored chip when Island chips is enabled.
     val chip: Boolean = key in IslandChips.items,
+    // Kept right of the camera, at the outer end of the compact island.
+    val compactEndSide: Boolean = false,
 ) {
     var userPriority: Int? = null
 
@@ -195,6 +197,7 @@ class IslandItem(
         queued = queued,
         priorityGroup = priorityGroup,
         chip = chip,
+        compactEndSide = compactEndSide,
     ).also {
         it.userPriority = userPriority
         it.inBubble = inBubble
