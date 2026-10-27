@@ -113,4 +113,55 @@ class CompactLayoutEngineTest {
 
     @Test fun measuredWidthsCountInsteadOfCellCount() =
         assertEquals(setOf("time", "battery", "flash"), budgeted(maxWidth = 3.5f, widths = mapOf("notif" to 2f)))
+
+    private fun shown(a: com.sameerasw.essentials.island.state.CompactArrangement) =
+        (a.before.reversed() + "|" + a.after).joinToString(" ")
+
+    @Test fun hubStaysOnScreenOverAChip() {
+        val chipMedia = media.copy(keepTogether = true)
+        val chipFlash = flash.copy(keepTogether = true)
+        val wifi = CompactEntry("wifi", 40, false, listOf("wifi.icon"))
+        val a = CompactLayoutEngine.arrange(listOf(wifi, chipFlash, chipMedia, catchUp), maxCells = 8, leftExtra = 1, sideMax = 3.5f)
+        // Hub (1) + both chips (3) is 4 > 3.5; media, the lowest-priority chip, fits on neither side, so it drops
+        assertEquals("flash.icon | notif.icon wifi.icon", shown(a))
+    }
+
+    @Test fun mediaStaysRightOtherChipsLeft() {
+        val chipMedia = media.copy(keepTogether = true, endSide = true)
+        val chipFlash = flash.copy(keepTogether = true)
+        val wifi = CompactEntry("wifi", 40, false, listOf("wifi.icon"))
+        for (balance in listOf(false, true)) {
+            val a = CompactLayoutEngine.arrange(listOf(chipMedia, chipFlash, wifi), maxCells = 8, leftExtra = 1, balance = balance)
+            assertEquals("flash.icon | wifi.icon media.eq media.art", shown(a))
+        }
+    }
+
+    @Test fun chipJoinsPinnedChipPastPinnedPlainItem() {
+        val chipTime = time.copy(keepTogether = true)
+        val sound = CompactEntry("sound", 15, false, listOf("sound.icon"), keepTogether = true)
+        val chipMedia = media.copy(keepTogether = true, endSide = true)
+        val wifi = CompactEntry("wifi", 40, false, listOf("wifi.icon"))
+        val a = CompactLayoutEngine.arrange(listOf(chipTime, battery, sound, chipMedia, wifi), maxCells = 8, leftExtra = 1)
+        assertEquals("battery sound.icon time | wifi.icon media.eq media.art", shown(a))
+    }
+
+    @Test fun pinnedPlainItemCrossesToEvenWidths() {
+        val chipTime = time.copy(keepTogether = true)
+        val sound = CompactEntry("sound", 15, false, listOf("sound.icon"), keepTogether = true)
+        val chipMedia = media.copy(keepTogether = true, endSide = true)
+        val a = CompactLayoutEngine.arrange(
+            listOf(chipTime, battery, sound, chipMedia),
+            maxCells = 8,
+            widthOf = { if (it.itemKey == "time") 2f else it.cellKeys.size.toFloat() },
+        )
+        assertEquals("sound.icon time | battery media.eq media.art", shown(a))
+    }
+
+    @Test fun chipsGatherOnOneSide() {
+        val chipFlash = flash.copy(keepTogether = true)
+        val sound = CompactEntry("sound", 25, false, listOf("sound.icon"), keepTogether = true)
+        val a = CompactLayoutEngine.arrange(listOf(time, chipFlash, sound, catchUp), maxCells = 8, balance = true)
+        val sides = listOf(a.before, a.after).map { side -> side.count { it == "flash.icon" || it == "sound.icon" } }
+        assert(2 in sides) { shown(a) }
+    }
 }

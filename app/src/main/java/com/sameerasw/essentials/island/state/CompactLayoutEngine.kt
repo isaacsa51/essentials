@@ -10,6 +10,8 @@ data class CompactEntry(
     val needsCompany: Boolean = false,
     val companionOnly: Boolean = false,
     val keepTogether: Boolean = false,
+    // Always placed right of the camera, at the outer end
+    val endSide: Boolean = false,
 )
 
 // `before` / `after` are camera-relative and ordered inner (next to camera) → outer.
@@ -39,6 +41,10 @@ object CompactLayoutEngine {
         mirror: Boolean = false,
         maxWidth: Float = Float.MAX_VALUE,
         widthOf: (CompactEntry) -> Float = { it.cellKeys.size.toFloat() },
+        // Widest each side of the camera may get, bubbles included
+        sideMax: Float = Float.MAX_VALUE,
+        // Cells of a bubble right of the island, already netted out of leftExtra
+        endExtra: Int = 0,
     ): CompactArrangement {
         val base = entries.filterNot { it.companionOnly }
         val companions = entries.filter { it.companionOnly }
@@ -154,6 +160,14 @@ object CompactLayoutEngine {
             }
         }
 
+        if (selected.any { it.keepTogether }) groupChips(before, after, selected, leftExtra)
+
+        val dropped = arrangeByWidth(before, after, selected, leftExtra + endExtra, endExtra, sideMax, widthOf)
+        return finish(CompactArrangement(before, after, visible - dropped), selected.filterNot { it.itemKey in dropped })
+    }
+
+    private fun finish(arrangement: CompactArrangement, selected: List<CompactEntry>): CompactArrangement {
+        val (before, after, visible) = arrangement
         val solo = selected.singleOrNull()
         if (solo != null && solo.soloCellKeys.isNotEmpty() && solo.cellKeys.size == 1) {
             if (solo.keepTogether) return CompactArrangement(emptyList(), solo.soloCellKeys + solo.cellKeys, visible)
@@ -165,6 +179,155 @@ object CompactLayoutEngine {
             return CompactArrangement(listOf(item.cellKeys[0]), listOf(item.cellKeys[1]), visible)
         }
         return CompactArrangement(before, after, visible)
+    }
+
+    // By measured width, either balance mode (balanced, the pill pads itself around this): end-side items (media) sit
+    // right of the camera at the outer end, other chips join the chip run on the left, plain items go right and come
+    // back left only while that narrows the gap, and a pinned plain item crosses right while that narrows it. Then each
+    // side, bubble included, is trimmed to sideMax (lowest priority first moves across, else is dropped; end-side items
+    // go last) so nothing, the hub bubble above all, leaves the screen. Pinned items are never dropped. Returns the
+    // dropped item keys.
+    internal fun arrangeByWidth(
+        before: MutableList<String>,
+        after: MutableList<String>,
+        entries: List<CompactEntry>,
+        leftExtra: Int,
+        rightExtra: Int,
+        sideMax: Float,
+        widthOf: (CompactEntry) -> Float,
+    ): Set<String> {
+        val byCell = entries.flatMap { e -> e.cellKeys.map { it to e } }.toMap()
+        fun blocks(side: List<String>) = side.mapNotNull { byCell[it] }.distinct()
+        fun width(side: List<String>, extra: Int) = extra + blocks(side).sumOf { widthOf(it).toDouble() }.toFloat()
+        // Whether shifting `shift` of width from the right side to the left one (negative: the other way) evens them out
+        fun narrows(l: Float, r: Float, shift: Float) = kotlin.math.abs((l + shift) - (r - shift)) < kotlin.math.abs(l - r)
+        // Into the right side, items land inside the end-side ones; into the left, a chip joins the chip run there (next
+        // to a pinned chip rather than past a pinned plain item) and anything else goes to the outer end
+        fun move(e: CompactEntry, from: MutableList<String>, to: MutableList<String>) {
+            val cells = from.filter { byCell[it] == e }
+            from.removeAll(cells.toSet())
+            when {
+                to === after -> to.addAll(after.count { byCell[it]?.endSide != true }, cells)
+                e.keepTogether -> to.addAll(before.indexOfLast { byCell[it]?.keepTogether == true } + 1, cells)
+                else -> to += cells
+            }
+        }
+        blocks(before).filter { it.endSide && !it.pinned }.forEach { move(it, before, after) }
+        blocks(after).filter { it.endSide && !it.pinned }.forEach {
+            val cells = after.filter { c -> byCell[c] == it }
+            after.removeAll(cells.toSet())
+            after += cells
+        }
+        if (entries.any { it.keepTogether && !it.endSide && !it.pinned }) {
+            // Chips already on the left rejoin the run too, so a pinned plain item doesn't split them from a pinned chip
+            blocks(before).filter { it.keepTogether && !it.pinned }.forEach { move(it, before, before) }
+            blocks(after).filter { it.keepTogether && !it.endSide && !it.pinned }.forEach { move(it, after, before) }
+            blocks(before).filter { !it.keepTogether && !it.pinned }.forEach { move(it, before, after) }
+            for (e in blocks(after).filter { !it.keepTogether && !it.endSide && !it.pinned }.sortedByDescending { it.priority }) {
+                if (!narrows(width(before, leftExtra), width(after, rightExtra), widthOf(e))) break
+                move(e, after, before)
+            }
+        }
+        // A pinned plain item (battery) is pinned to stay shown, not to a side: it crosses while that narrows the gap
+        for (e in blocks(before).filter { it.pinned && !it.keepTogether }.sortedByDescending { it.priority }) {
+            val r = width(after, rightExtra)
+            if (r + widthOf(e) > sideMax || !narrows(width(before, leftExtra), r, -widthOf(e))) continue
+            move(e, before, after)
+        }
+        val dropped = mutableSetOf<String>()
+        for (fromBefore in listOf(true, false)) {
+            val from = if (fromBefore) before else after
+            val to = if (fromBefore) after else before
+            val fromExtra = if (fromBefore) leftExtra else rightExtra
+            val toExtra = if (fromBefore) rightExtra else leftExtra
+            while (width(from, fromExtra) > sideMax) {
+                val candidates = blocks(from).filterNot { it.pinned }
+                val e = (candidates.filterNot { it.endSide }.ifEmpty { candidates }).maxByOrNull { it.priority } ?: break
+                if (!e.endSide && width(to, toExtra) + widthOf(e) <= sideMax) {
+                    move(e, from, to)
+                } else {
+                    from.removeAll(e.cellKeys.toSet())
+                    dropped += e.itemKey
+                }
+            }
+        }
+        return dropped
+    }
+
+    // Chips read as one group, so they always end up on one side of the camera, next to each other. Gathering wins over
+    // balance: a chip swaps with a same-size plain item on the far side when it can (both sides keep their cell
+    // count), otherwise it moves over anyway. A plain item left between chips then moves across the camera if that
+    // doesn't worsen the balance, else outward on its own side. Pinned items never move.
+    internal fun groupChips(before: MutableList<String>, after: MutableList<String>, entries: List<CompactEntry>, leftExtra: Int) {
+        val byCell = entries.flatMap { e -> e.cellKeys.map { it to e } }.toMap()
+        fun blocks(side: List<String>) = side.mapNotNull { byCell[it] }.distinct()
+        fun cellsOf(side: List<String>, entry: CompactEntry) = side.filter { byCell[it] == entry }
+        fun chipCells(side: List<String>) = side.count { byCell[it]?.keepTogether == true }
+        fun pinnedChip(side: List<String>) = blocks(side).any { it.keepTogether && it.pinned }
+        fun chipRunEnd(side: List<String>) = side.indexOfLast { byCell[it]?.keepTogether == true } + 1
+
+        // Gather on the side holding a pinned chip (it can't leave), else the one with more chip cells
+        val gatherBefore = if (pinnedChip(before) != pinnedChip(after)) pinnedChip(before) else chipCells(before) >= chipCells(after)
+        val target = if (gatherBefore) before else after
+        val source = if (gatherBefore) after else before
+        if (chipCells(target) > 0) {
+            for (chip in blocks(source).filter { it.keepTogether && !it.pinned }) {
+                val chipCellKeys = cellsOf(source, chip)
+                val swap = blocks(target).firstOrNull { !it.keepTogether && !it.pinned && it.cellKeys.size == chip.cellKeys.size }
+                if (swap != null) {
+                    val plain = cellsOf(target, swap)
+                    val at = source.indexOf(chipCellKeys.first())
+                    source.removeAll(chipCellKeys.toSet())
+                    source.addAll(at, plain)
+                    target.removeAll(plain.toSet())
+                } else {
+                    source.removeAll(chipCellKeys.toSet())
+                }
+                target.addAll(chipRunEnd(target), chipCellKeys)
+            }
+        }
+
+        // The plain, movable entry that splits the chip run on this side, innermost first
+        fun breaker(side: List<String>): CompactEntry? {
+            val order = blocks(side)
+            val first = order.indexOfFirst { it.keepTogether }
+            val last = order.indexOfLast { it.keepTogether }
+            if (first < 0 || last <= first) return null
+            return order.subList(first + 1, last).firstOrNull { !it.keepTogether && !it.pinned }
+        }
+        fun regroup(side: MutableList<String>) {
+            val order = blocks(side)
+            val firstChip = order.indexOfFirst { it.keepTogether }
+            if (firstChip < 0) return
+            val rest = order.drop(firstChip)
+            // Pinned plain items can't move, so a side with one inside its chip run stays as it is
+            if (rest.any { !it.keepTogether && it.pinned }) return
+            val arranged = order.take(firstChip) + rest.filter { it.keepTogether } + rest.filterNot { it.keepTogether }
+            val cells = arranged.flatMap { cellsOf(side, it) }
+            side.clear()
+            side += cells
+        }
+        repeat(entries.size) {
+            for (fromBefore in listOf(true, false)) {
+                val from = if (fromBefore) before else after
+                val to = if (fromBefore) after else before
+                val entry = breaker(from) ?: continue
+                val size = entry.cellKeys.size
+                val left = before.size + leftExtra
+                val right = after.size
+                val gap = kotlin.math.abs(left - right)
+                val movedGap = if (fromBefore) kotlin.math.abs((left - size) - (right + size)) else kotlin.math.abs((left + size) - (right - size))
+                if (movedGap <= gap) {
+                    val cells = cellsOf(from, entry)
+                    from.removeAll(cells.toSet())
+                    to += cells
+                } else {
+                    regroup(from)
+                }
+            }
+        }
+        regroup(before)
+        regroup(after)
     }
 
     private fun select(

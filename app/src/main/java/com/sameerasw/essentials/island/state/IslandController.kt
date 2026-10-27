@@ -341,6 +341,7 @@ class IslandController(
                     item.needsCompanyAtCenter,
                     item.companionOnly,
                     chipsEnabled && item.chip,
+                    item.compactEndSide,
                 )
             }
         val sideExtra = bubbleOwner?.sideBubble?.cells?.coerceAtLeast(1) ?: 0
@@ -358,6 +359,8 @@ class IslandController(
                 Float.MAX_VALUE
             },
             widthOf = ::widthOf,
+            sideMax = widthBudget / 2f - BUBBLE_ROOM,
+            endExtra = endCells,
         )
         val allMarked = if (anchorProvider() != CameraAnchor.Center) {
             emptyList()
