@@ -181,12 +181,6 @@ object CompactLayoutEngine {
         return CompactArrangement(before, after, visible)
     }
 
-    // By measured width, either balance mode (balanced, the pill pads itself around this): end-side items (media) sit
-    // right of the camera at the outer end, other chips join the chip run on the left, plain items go right and come
-    // back left only while that narrows the gap, and a pinned plain item crosses right while that narrows it. Then each
-    // side, bubble included, is trimmed to sideMax (lowest priority first moves across, else is dropped; end-side items
-    // go last) so nothing, the hub bubble above all, leaves the screen. Pinned items are never dropped. Returns the
-    // dropped item keys.
     internal fun arrangeByWidth(
         before: MutableList<String>,
         after: MutableList<String>,
@@ -199,10 +193,7 @@ object CompactLayoutEngine {
         val byCell = entries.flatMap { e -> e.cellKeys.map { it to e } }.toMap()
         fun blocks(side: List<String>) = side.mapNotNull { byCell[it] }.distinct()
         fun width(side: List<String>, extra: Int) = extra + blocks(side).sumOf { widthOf(it).toDouble() }.toFloat()
-        // Whether shifting `shift` of width from the right side to the left one (negative: the other way) evens them out
         fun narrows(l: Float, r: Float, shift: Float) = kotlin.math.abs((l + shift) - (r - shift)) < kotlin.math.abs(l - r)
-        // Into the right side, items land inside the end-side ones; into the left, a chip joins the chip run there (next
-        // to a pinned chip rather than past a pinned plain item) and anything else goes to the outer end
         fun move(e: CompactEntry, from: MutableList<String>, to: MutableList<String>) {
             val cells = from.filter { byCell[it] == e }
             from.removeAll(cells.toSet())
@@ -219,7 +210,6 @@ object CompactLayoutEngine {
             after += cells
         }
         if (entries.any { it.keepTogether && !it.endSide && !it.pinned }) {
-            // Chips already on the left rejoin the run too, so a pinned plain item doesn't split them from a pinned chip
             blocks(before).filter { it.keepTogether && !it.pinned }.forEach { move(it, before, before) }
             blocks(after).filter { it.keepTogether && !it.endSide && !it.pinned }.forEach { move(it, after, before) }
             blocks(before).filter { !it.keepTogether && !it.pinned }.forEach { move(it, before, after) }
@@ -228,7 +218,6 @@ object CompactLayoutEngine {
                 move(e, after, before)
             }
         }
-        // A pinned plain item (battery) is pinned to stay shown, not to a side: it crosses while that narrows the gap
         for (e in blocks(before).filter { it.pinned && !it.keepTogether }.sortedByDescending { it.priority }) {
             val r = width(after, rightExtra)
             if (r + widthOf(e) > sideMax || !narrows(width(before, leftExtra), r, -widthOf(e))) continue
@@ -254,10 +243,6 @@ object CompactLayoutEngine {
         return dropped
     }
 
-    // Chips read as one group, so they always end up on one side of the camera, next to each other. Gathering wins over
-    // balance: a chip swaps with a same-size plain item on the far side when it can (both sides keep their cell
-    // count), otherwise it moves over anyway. A plain item left between chips then moves across the camera if that
-    // doesn't worsen the balance, else outward on its own side. Pinned items never move.
     internal fun groupChips(before: MutableList<String>, after: MutableList<String>, entries: List<CompactEntry>, leftExtra: Int) {
         val byCell = entries.flatMap { e -> e.cellKeys.map { it to e } }.toMap()
         fun blocks(side: List<String>) = side.mapNotNull { byCell[it] }.distinct()
@@ -266,7 +251,6 @@ object CompactLayoutEngine {
         fun pinnedChip(side: List<String>) = blocks(side).any { it.keepTogether && it.pinned }
         fun chipRunEnd(side: List<String>) = side.indexOfLast { byCell[it]?.keepTogether == true } + 1
 
-        // Gather on the side holding a pinned chip (it can't leave), else the one with more chip cells
         val gatherBefore = if (pinnedChip(before) != pinnedChip(after)) pinnedChip(before) else chipCells(before) >= chipCells(after)
         val target = if (gatherBefore) before else after
         val source = if (gatherBefore) after else before
@@ -287,7 +271,6 @@ object CompactLayoutEngine {
             }
         }
 
-        // The plain, movable entry that splits the chip run on this side, innermost first
         fun breaker(side: List<String>): CompactEntry? {
             val order = blocks(side)
             val first = order.indexOfFirst { it.keepTogether }
@@ -300,7 +283,6 @@ object CompactLayoutEngine {
             val firstChip = order.indexOfFirst { it.keepTogether }
             if (firstChip < 0) return
             val rest = order.drop(firstChip)
-            // Pinned plain items can't move, so a side with one inside its chip run stays as it is
             if (rest.any { !it.keepTogether && it.pinned }) return
             val arranged = order.take(firstChip) + rest.filter { it.keepTogether } + rest.filterNot { it.keepTogether }
             val cells = arranged.flatMap { cellsOf(side, it) }
