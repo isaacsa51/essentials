@@ -41,7 +41,6 @@ import com.sameerasw.essentials.island.model.CompactPlacement
 import com.sameerasw.essentials.island.model.ExpandedContent
 import com.sameerasw.essentials.island.model.IslandItem
 import com.sameerasw.essentials.island.model.IslandPriority
-import com.sameerasw.essentials.island.model.OutlineEffect
 import com.sameerasw.essentials.island.plugins.BaseIslandPlugin
 import com.sameerasw.essentials.island.plugins.launchPackage
 import com.sameerasw.essentials.island.plugins.sendPendingIntent
@@ -56,12 +55,6 @@ class ProgressPlugin : BaseIslandPlugin() {
 
     private var data: ProgressNotificationData? = null
     private var icon: ImageBitmap? = null
-    private var completing = false
-    private var afterComplete: ProgressNotificationData? = null
-    private val endComplete = Runnable {
-        completing = false
-        update(afterComplete)
-    }
 
     private val listener = object : NotificationListener.ProgressNotificationListener {
         override fun onProgressNotificationUpdated(data: ProgressNotificationData?) {
@@ -75,9 +68,6 @@ class ProgressPlugin : BaseIslandPlugin() {
 
     override fun onStop() {
         NotificationListener.removeProgressNotificationListener(listener)
-        ctx?.mainHandler?.removeCallbacks(endComplete)
-        completing = false
-        afterComplete = null
         data = null
         icon = null
     }
@@ -88,29 +78,10 @@ class ProgressPlugin : BaseIslandPlugin() {
     }
 
     private fun update(next: ProgressNotificationData?) {
-        val c = ctx ?: return
-        if (completing) {
-            afterComplete = next
-            return
-        }
-        val previous = data
-        if (previous != null && settings.getBoolean(SettingsRepository.KEY_ISLAND_PROGRESS_COMPLETE_ANIM, true) && finished(previous, next)) {
-            completing = true
-            afterComplete = next
-            data = previous.copy(progress = 100f)
-            render()
-            c.mainHandler.postDelayed(endComplete, COMPLETE_MS)
-            return
-        }
+        if (ctx == null) return
         if (next?.icon !== data?.icon) icon = next?.icon?.asImageBitmap()
         data = next
         render()
-    }
-
-    private fun finished(previous: ProgressNotificationData, next: ProgressNotificationData?): Boolean {
-        if (previous.isIndeterminate || previous.progress >= 100f) return false
-        if (next == null) return previous.progress >= 90f
-        return next.key == previous.key && !next.isIndeterminate && next.progress >= 100f
     }
 
     private fun render() {
@@ -127,7 +98,6 @@ class ProgressPlugin : BaseIslandPlugin() {
                 key = ITEM_KEY,
                 priority = IslandPriority.PROGRESS,
                 placement = CompactPlacement.Dynamic,
-                outlineEffect = OutlineEffect(Color.Unspecified, OutlineEffect.Style.Trace).takeIf { completing },
                 compact = listOf(
                     CompactCell("progress.ring") {
                         ProgressRing(progress, indeterminate, image, islandAccent())
@@ -162,7 +132,6 @@ class ProgressPlugin : BaseIslandPlugin() {
 
     companion object {
         const val ITEM_KEY = "progress"
-        private const val COMPLETE_MS = 2800L
     }
 }
 
