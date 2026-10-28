@@ -1168,15 +1168,6 @@ fun IslandNotificationSettingsUI(
                 },
                 modifier = Modifier.highlight(highlightSetting == "island_notif_keep_progress"),
             )
-
-            if (viewModel.isIslandNotifKeepProgress.value) {
-                IslandPrefToggle(
-                    settingKey = SettingsRepository.KEY_ISLAND_PROGRESS_COMPLETE_ANIM,
-                    iconRes = R.drawable.rounded_download_24,
-                    title = stringResource(R.string.island_progress_complete_anim_title),
-                    defaultValue = true,
-                )
-            }
         }
 
         AnimatedVisibility(
