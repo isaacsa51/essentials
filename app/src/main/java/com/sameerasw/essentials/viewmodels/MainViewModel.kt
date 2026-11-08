@@ -81,6 +81,7 @@ import com.sameerasw.essentials.services.NotificationLightingService
 import com.sameerasw.essentials.services.receivers.FlashlightActionReceiver
 import com.sameerasw.essentials.services.receivers.SecurityDeviceAdminReceiver
 import com.sameerasw.essentials.services.receivers.SecurityReceiver
+import com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer
 import com.sameerasw.essentials.services.tiles.ScreenOffAccessibilityService
 import com.sameerasw.essentials.utils.AppIconUtil
 import com.sameerasw.essentials.utils.AppUtil
@@ -9626,10 +9627,10 @@ class MainViewModel : ViewModel() {
         inputStream: java.io.InputStream,
         keepPrefs: Boolean,
     ): Boolean {
-        val localAddedTiles = com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.locallyAddedTiles(context)
+        val localAddedTiles = QsTileLayoutRestorer.locallyAddedTiles(context)
         val success = settingsRepository.importConfigs(inputStream, keepPrefs)
         if (success) {
-            com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.prepareAfterImport(context, localAddedTiles)
+            QsTileLayoutRestorer.prepareAfterImport(context, localAddedTiles)
             settingsRepository.syncSystemSettingsWithSaved()
             com.sameerasw.essentials.domain.diy.DIYRepository
                 .reloadAutomations()
@@ -9640,22 +9641,15 @@ class MainViewModel : ViewModel() {
         return success
     }
 
-    // Import is the user's go-ahead: with Shizuku/root the tiles go straight back to their old spots,
-    // anything left is offered on the Quick Settings tiles screen through the system add-tile dialog.
+    // Never touches the layout on import: the restore card on the Quick Settings tiles screen asks first.
     private fun restoreImportedQsTiles(context: Context) {
-        if (qsTilesPendingRestore.value.isEmpty()) return
-        viewModelScope.launch {
-            val result = if (ShellUtils.hasPermission(context)) restoreQsTilesWithShell(context) else null
-            val left = qsTilesPendingRestore.value.size
-            val message = when {
-                result != null && result.restored.isNotEmpty() && left == 0 ->
-                    context.resources.getQuantityString(R.plurals.qs_tiles_restored_toast, result.restored.size, result.restored.size)
-                left > 0 ->
-                    context.resources.getQuantityString(R.plurals.qs_tiles_restore_pending_toast, left, left)
-                else -> null
-            }
-            message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show() }
-        }
+        val left = qsTilesPendingRestore.value.size
+        if (left == 0) return
+        Toast.makeText(
+            context,
+            context.resources.getQuantityString(R.plurals.qs_tiles_restore_pending_toast, left, left),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 
     data class FreezeBackupData(
@@ -10324,29 +10318,29 @@ class MainViewModel : ViewModel() {
         addedQSTiles.value = fromSecureSettings + fromPrefs
 
         if (tilesString.isNotBlank()) {
-            com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.rememberLayout(context, tilesString)
+            QsTileLayoutRestorer.rememberLayout(context, tilesString)
         }
-        val presentClasses =
-            fromSecureSettings.mapNotNull { com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.customClass(it) }.toSet() + fromPrefs
+        val live = tilesString.takeIf { it.isNotBlank() }?.let { fromSecureSettings.mapNotNull(QsTileLayoutRestorer::customClass).toSet() }
+        val presentClasses = QsTileLayoutRestorer.alreadyAdded(live, fromPrefs)
         qsTilesPendingRestore.value =
-            com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.reconcile(context, presentClasses)
+            QsTileLayoutRestorer.reconcile(context, presentClasses)
     }
 
     /** Puts pending tiles back at their old positions through Shizuku/root. Returns how many were restored. */
-    suspend fun restoreQsTilesWithShell(context: Context): com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.ShellResult {
-        val result = com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.restoreWithShell(context)
+    suspend fun restoreQsTilesWithShell(context: Context): QsTileLayoutRestorer.ShellResult {
+        val result = QsTileLayoutRestorer.restoreWithShell(context)
         updateAddedQSTiles(context)
         return result
     }
 
     fun markQsTileRestored(context: Context, className: String) {
-        com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.markAdded(context, className)
+        QsTileLayoutRestorer.markAdded(context, className)
         addedQSTiles.value = addedQSTiles.value + className
         qsTilesPendingRestore.value = qsTilesPendingRestore.value - className
     }
 
     fun dismissQsTileRestore(context: Context) {
-        com.sameerasw.essentials.services.tiles.QsTileLayoutRestorer.clearPending(context)
+        QsTileLayoutRestorer.clearPending(context)
         qsTilesPendingRestore.value = emptySet()
     }
 
