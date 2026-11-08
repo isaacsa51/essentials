@@ -182,13 +182,15 @@ private fun mediaSurfacePaint(gradient: MediaSurfaceGradient) = Paint(Paint.ANTI
 }
 
 /**
- * Paints the layered media surface's translucent gradient over this element's own bounds, for shapes that sit
- * next to the media card (such as the lyrics attachment) and should share its transparency.
+ * Paints the layered media surface's translucent gradient over this element, for shapes that sit next to the media
+ * card (such as the lyrics attachment) and should share its transparency.
+ *
+ * @param cardBounds Where the card is, in this element's coordinates, so the card's gradient continues into this
+ *  shape; null uses this element's own bounds. Read while drawing, so it can follow an animating card.
  */
-fun Modifier.mediaSurfaceGradient(): Modifier = drawWithCache {
-    val rect = Rect(0f, 0f, size.width, size.height)
+fun Modifier.mediaSurfaceGradient(cardBounds: (Size) -> Rect? = { null }): Modifier = drawBehind {
+    if (size.width <= 0f || size.height <= 0f) return@drawBehind
+    val rect = cardBounds(size) ?: Rect(0f, 0f, size.width, size.height)
     val paint = mediaSurfacePaint(mediaSurfaceGradient(rect, camera = null, clearance = 0f))
-    onDrawBehind {
-        if (size.width > 0f && size.height > 0f) drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
-    }
+    drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
 }

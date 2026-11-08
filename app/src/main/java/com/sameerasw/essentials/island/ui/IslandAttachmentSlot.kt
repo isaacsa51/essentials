@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import com.sameerasw.essentials.island.model.IslandAttachment
 import com.sameerasw.island.media.ui.mediaSurfaceGradient
 import kotlin.math.roundToInt
@@ -47,6 +49,8 @@ fun IslandAttachmentSlot(
     onSizeChanged: (IntSize) -> Unit,
     // Matches a translucent expanded surface with the same gradient instead of solid black
     translucent: Boolean = false,
+    // Card bounds in the slot's coordinates, so the card's gradient carries on into the attachment
+    cardBounds: (Size) -> Rect? = { null },
 ) {
     // Plain holder: kept only so the shape can fade out with its last content, never read as state
     val last = remember { arrayOfNulls<IslandAttachment>(1) }
@@ -96,7 +100,7 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                .then(if (translucent) Modifier.mediaSurfaceGradient() else Modifier.background(Color.Black))
+                .then(if (translucent) Modifier.mediaSurfaceGradient(cardBounds) else Modifier.background(Color.Black))
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
             current.content(widthPx, settled)

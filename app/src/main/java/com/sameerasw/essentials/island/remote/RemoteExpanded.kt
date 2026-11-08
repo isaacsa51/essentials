@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -119,7 +120,8 @@ internal fun RemoteSurfaceBox(
             bitmap = it,
             contentDescription = null,
             contentScale = ContentScale.FillBounds,
-            modifier = Modifier.matchParentSize(),
+            // An on-top surface may be transparent, so the snapshot under it would show its stale content through
+            modifier = Modifier.matchParentSize().graphicsLayer { alpha = if (aboveHost) 1f - fade else 1f },
         )
     }
     AndroidView(
