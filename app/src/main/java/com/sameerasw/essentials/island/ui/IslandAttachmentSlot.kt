@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import com.sameerasw.essentials.island.model.IslandAttachment
+import com.sameerasw.island.media.ui.mediaSurfaceGradient
 import kotlin.math.roundToInt
 
 /**
@@ -44,6 +45,8 @@ fun IslandAttachmentSlot(
     outlineColor: Color?,
     outlineThickness: Dp,
     onSizeChanged: (IntSize) -> Unit,
+    // Matches a translucent expanded surface with the same gradient instead of solid black
+    translucent: Boolean = false,
 ) {
     // Plain holder: kept only so the shape can fade out with its last content, never read as state
     val last = remember { arrayOfNulls<IslandAttachment>(1) }
@@ -93,7 +96,7 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                .background(Color.Black)
+                .then(if (translucent) Modifier.mediaSurfaceGradient() else Modifier.background(Color.Black))
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
             current.content(widthPx, settled)

@@ -281,6 +281,7 @@ class MediaPlugin : BaseIslandPlugin() {
             IslandItem(
                 key = ITEM_KEY,
                 expandedSurfaceStyle = if (layered) ExpandedSurfaceStyle.Layered else ExpandedSurfaceStyle.Default,
+                translucentSurface = layered && settings.isIslandMediaLayeredTranslucentEnabled(),
                 priority = IslandPriority.MEDIA,
                 placement = CompactPlacement.Dynamic,
                 compactEndSide = true,

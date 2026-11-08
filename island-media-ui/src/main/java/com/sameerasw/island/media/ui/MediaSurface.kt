@@ -69,20 +69,7 @@ internal fun MediaSurface(state: MediaPlayerState, modifier: Modifier) {
         Box(Modifier.matchParentSize().then(progressiveBlur).drawWithCache {
             val geometry = state.surface.geometry?.invoke()
             val rect = geometry?.bounds ?: Rect(0f, 0f, size.width, size.height)
-            val gradient = mediaSurfaceGradient(rect, state.surface.camera?.invoke(), MediaCameraClearance.toPx())
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = RadialGradient(
-                    0f, 0f, 1f,
-                    intArrayOf(0xFF000000.toInt(), 0xF2000000.toInt(), 0xE6000000.toInt(), 0xCC000000.toInt(), 0x8C000000.toInt(), 0x80000000.toInt()),
-                    gradient.stops,
-                    Shader.TileMode.CLAMP,
-                ).apply {
-                    setLocalMatrix(Matrix().apply {
-                        setScale(gradient.radiusX, gradient.radiusY)
-                        postTranslate(gradient.center.x, gradient.center.y)
-                    })
-                }
-            }
+            val paint = mediaSurfacePaint(mediaSurfaceGradient(rect, state.surface.camera?.invoke(), MediaCameraClearance.toPx()))
             val corner = (geometry?.cornerRadius ?: state.surface.corner.toPx())
                 .coerceIn(0f, minOf(rect.width, rect.height).coerceAtLeast(0f) / 2f)
             onDrawBehind {
@@ -177,4 +164,31 @@ internal fun MediaTopShade(state: MediaPlayerState, modifier: Modifier) {
             size = Size(if (geometry != null) size.width else rect.width + 16.dp.toPx(), height),
         )
     })
+}
+
+/** The surface's black radial transparency gradient: opaque at [gradient]'s centre, half transparent at its edge. */
+private fun mediaSurfacePaint(gradient: MediaSurfaceGradient) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    shader = RadialGradient(
+        0f, 0f, 1f,
+        intArrayOf(0xFF000000.toInt(), 0xF2000000.toInt(), 0xE6000000.toInt(), 0xCC000000.toInt(), 0x8C000000.toInt(), 0x80000000.toInt()),
+        gradient.stops,
+        Shader.TileMode.CLAMP,
+    ).apply {
+        setLocalMatrix(Matrix().apply {
+            setScale(gradient.radiusX, gradient.radiusY)
+            postTranslate(gradient.center.x, gradient.center.y)
+        })
+    }
+}
+
+/**
+ * Paints the layered media surface's translucent gradient over this element's own bounds, for shapes that sit
+ * next to the media card (such as the lyrics attachment) and should share its transparency.
+ */
+fun Modifier.mediaSurfaceGradient(): Modifier = drawWithCache {
+    val rect = Rect(0f, 0f, size.width, size.height)
+    val paint = mediaSurfacePaint(mediaSurfaceGradient(rect, camera = null, clearance = 0f))
+    onDrawBehind {
+        if (size.width > 0f && size.height > 0f) drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+    }
 }

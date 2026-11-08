@@ -1084,9 +1084,11 @@ private fun IslandRootContent(
                 (surfaceTopPx + liveSurfaceHeight.intValue + attachmentGapPx + pill).toFloat()
             },
             collapse = { collapse.value },
-            outlineColor = outlineFor(1f),
+            // The layered surface drops the card outline, so its attachment does too
+            outlineColor = outlineFor(1f)?.takeUnless { focusedItem?.expandedSurfaceStyle == ExpandedSurfaceStyle.Layered },
             outlineThickness = spec.outlineThickness,
             onSizeChanged = { attachmentSize = it },
+            translucent = focusedItem?.translucentSurface == true,
         )
         if (bond > 0.001f && lastCatchUp != null && catchUpAnim.value > 0.5f && !bubbleOnlyLayout) {
             Box(
