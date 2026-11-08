@@ -170,6 +170,9 @@ class IslandItem(
     val companionOnly: Boolean = false,
     val bypassLauncherOnly: Boolean = false,
     val hideExpandedQueue: Boolean = false,
+    // Anchor IslandAttachments resolve against while expanded, and the title they must match (see IslandAttachment.matches).
+    val attachmentAnchor: String? = null,
+    val attachmentTitle: String? = null,
     
     val stack: List<StackIcon> = emptyList(),
     val queued: List<StackIcon>? = null,
@@ -209,6 +212,8 @@ class IslandItem(
         companionOnly = companionOnly,
         bypassLauncherOnly = bypassLauncherOnly,
         hideExpandedQueue = hideExpandedQueue,
+        attachmentAnchor = attachmentAnchor,
+        attachmentTitle = attachmentTitle,
         stack = stack,
         queued = queued,
         priorityGroup = priorityGroup,

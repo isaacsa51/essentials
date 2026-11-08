@@ -4,6 +4,20 @@
 RELEASE_PKG="com.sameerasw.essentials"
 DEBUG_PKG="com.sameerasw.essentials.debug"
 
+# Adds an entry to a colon-separated secure setting, keeping what is already there
+add_to_secure_list() {
+    local KEY=$1
+    local ENTRY=$2
+    local CURRENT
+    CURRENT=$(adb shell settings get secure "$KEY" | tr -d '\r')
+
+    if [ -z "$CURRENT" ] || [ "$CURRENT" = "null" ]; then
+        adb shell settings put secure "$KEY" "$ENTRY"
+    elif [[ ":$CURRENT:" != *":$ENTRY:"* ]]; then
+        adb shell settings put secure "$KEY" "'$CURRENT:$ENTRY'"
+    fi
+}
+
 # Function to grant permissions to a specific package
 grant_permissions() {
     local PKG=$1
@@ -39,14 +53,14 @@ grant_permissions() {
     adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow
     adb shell appops set $PKG ACCESS_NOTIFICATIONS allow
 
-    # Enable Services
+    # Enable Services (added to the existing lists, never replacing other apps' entries)
     # Notification Listener
     LISTENER="$PKG/com.sameerasw.essentials.services.NotificationListener"
-    adb shell settings put secure enabled_notification_listeners $LISTENER
+    adb shell cmd notification allow_listener "$LISTENER"
 
     # Accessibility Service
     ACCESSIBILITY="$PKG/com.sameerasw.essentials.services.tiles.ScreenOffAccessibilityService"
-    adb shell settings put secure enabled_accessibility_services $ACCESSIBILITY
+    add_to_secure_list enabled_accessibility_services "$ACCESSIBILITY"
     adb shell settings put secure accessibility_enabled 1
 
     echo "Finished $PKG"

@@ -27,6 +27,7 @@ import com.sameerasw.essentials.island.ui.components.MediaArtCue
 import com.sameerasw.essentials.island.ui.components.TrackSkipPill
 import com.sameerasw.essentials.island.ui.components.IslandBitmap
 import com.sameerasw.essentials.services.NotificationListener
+import com.sameerasw.island.sdk.IslandAnchor
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -72,9 +73,11 @@ class MediaPlugin : BaseIslandPlugin() {
 
     override fun onStart() {
         source = MediaSessionSource(context, ctx!!.mainHandler) { evaluate() }.also { it.start() }
+        DebugLyricsAttachment.install()
     }
 
     override fun onStop() {
+        DebugLyricsAttachment.uninstall()
         IslandMediaState.current.value = null
         lastController = null
         lastTrack = null
@@ -227,6 +230,8 @@ class MediaPlugin : BaseIslandPlugin() {
                 onOpen = { openPlayer() },
                 sourcePackage = t.packageName,
                 hideExpandedQueue = true,
+                attachmentAnchor = IslandAnchor.MEDIA,
+                attachmentTitle = t.title,
             ),
         )
     }

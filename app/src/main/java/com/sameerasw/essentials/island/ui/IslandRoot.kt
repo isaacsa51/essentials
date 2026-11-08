@@ -106,6 +106,7 @@ import com.sameerasw.essentials.island.gestures.CompactGestures
 import com.sameerasw.essentials.island.gestures.IslandSlideFeedback
 import com.sameerasw.essentials.island.gestures.SlideFeedback
 import com.sameerasw.essentials.island.ui.components.SlideFeedbackCompact
+import com.sameerasw.essentials.island.model.IslandAttachments
 import com.sameerasw.essentials.island.model.IslandItem
 import com.sameerasw.essentials.island.model.IslandShake
 import com.sameerasw.essentials.island.model.OutlineEffect
@@ -712,6 +713,11 @@ private fun IslandRootContent(
 
     fun endBubbleX(width: Int): Int = surfaceLeft(width) + width + bubbleGapPx
     val focusedItem = state.focused
+    val attachmentsAll by IslandAttachments.all.collectAsState()
+    val attachment = focusedItem?.attachmentAnchor?.let { IslandAttachments.resolve(attachmentsAll, it, focusedItem.attachmentTitle) }
+    val attachmentShown = stage == IslandStage.Expanded && attachment != null
+    var attachmentSize by remember { mutableStateOf(IntSize.Zero) }
+    val attachmentGapPx = with(density) { 4.dp.roundToPx() }
     
     val foreignStack = if (focusedItem != null && focusedItem.stack.isEmpty()) {
         state.items.values.firstOrNull { it.key != focusedItem.key && it.stack.isNotEmpty() }?.stack.orEmpty()
@@ -795,7 +801,7 @@ private fun IslandRootContent(
 
     LaunchedEffect(
         target, windowWidth, stage, queueShown, pillSize, lineInsetActive, catchUpShown, hasCompactCells,
-        bubbleOnlyLayout, condensedLineActive, queueWidthPx, sideWidthPx, slackTarget, endShown, endWidthPx.intValue,
+        bubbleOnlyLayout, condensedLineActive, queueWidthPx, sideWidthPx, slackTarget, endShown, endWidthPx.intValue, attachmentShown, attachmentSize,
     ) {
         if (target == IntSize.Zero || windowWidth == 0) return@LaunchedEffect
         val g = if (stage == IslandStage.Expanded) outsetPx.roundToInt() else 0
@@ -831,6 +837,15 @@ private fun IslandRootContent(
                 bounds.top,
                 maxOf(bounds.right, pillLeft + pillSize.width),
                 bounds.bottom + with(density) { 2.dp.roundToPx() } + pillSize.height,
+            )
+        }
+        if (attachmentShown && attachmentSize != IntSize.Zero) {
+            val ax = left + (target.width - attachmentSize.width) / 2
+            bounds = IntRect(
+                minOf(bounds.left, ax),
+                bounds.top,
+                maxOf(bounds.right, ax + attachmentSize.width),
+                bounds.bottom + attachmentGapPx + attachmentSize.height,
             )
         }
         onTargetBoundsChanged(bounds)
@@ -940,6 +955,21 @@ private fun IslandRootContent(
                 )
             }
         }
+        IslandAttachmentSlot(
+            attachment = attachment,
+            shown = attachmentShown,
+            widthPx = with(density) { (spec.expandedWidth + spec.expandedOutset * 2).roundToPx() },
+            centerX = { val w = visibleWidth(); surfaceLeft(w) + w / 2f },
+            top = {
+                // Sits under the queue pill when an expanded item shows both
+                val pill = if (queueShown && currentState.stage == IslandStage.Expanded && pillSize.height > 0) pillSize.height + pillGapPx else 0
+                (surfaceTopPx + liveSurfaceHeight.intValue + attachmentGapPx + pill).toFloat()
+            },
+            collapse = { collapse.value },
+            outlineColor = outlineFor(1f),
+            outlineThickness = spec.outlineThickness,
+            onSizeChanged = { attachmentSize = it },
+        )
         if (bond > 0.001f && lastCatchUp != null && catchUpAnim.value > 0.5f && !bubbleOnlyLayout) {
             Box(
                 Modifier

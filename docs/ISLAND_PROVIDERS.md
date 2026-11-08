@@ -170,6 +170,30 @@ Requests over the limits are silently dropped.
 
 Provide `briefCards = listOf(BriefCardPayload(...))` in the payload to appear in the Brief overview. A card has a title, subtitle, icon, optional trailing icon and text, and an optional `pageHeightDp`. With a page height, tapping the card opens a page whose surface key is `IslandSurfaceKey.brief(card.key)`; return content for it from `ExpandedContent` the same way as for items.
 
+
+### 7. Attachments
+
+An attachment is a second shape the host draws **below one of its own items while that item is expanded**, bonded to it with the same liquid neck as the queue pill. The only anchor today is `IslandAnchor.MEDIA`: content shown under the media player, such as synced lyrics.
+
+```kotlin
+override fun onAttached(host: IslandHostHandle, info: HostInfo) {
+    if (!info.supportsAttachments) return            // older hosts drop nothing, they just never show it
+    host.publish(IslandPayload(
+        attachments = listOf(
+            IslandAttachmentPayload(key = "lyrics", anchor = IslandAnchor.MEDIA, heightDp = 72, matchTitle = track.title),
+        ),
+    ))
+}
+
+override fun hasExpandedContent(itemKey: String) = IslandSurfaceKey.isAttachment(itemKey)
+```
+
+- The surface key is `IslandSurfaceKey.attachment(key)`; draw it from `ExpandedContent` like any other surface and report its height with `host.resize(surfaceKey, px)`.
+- The host sizes the width to the expanded card. Clip to `min(28dp, height / 2)`, the corner the host clips with.
+- With `matchTitle`, the host only shows the attachment while the anchor's title contains it (or the other way round, case-insensitive), so stale content never sits under another track. Leave it null to always show.
+- One attachment per anchor per provider, height 40 to 240 dp. If several providers target the same anchor, the first by package name wins.
+- Attachments are never shown on Android 10 and earlier; `supportsAttachments` is false there.
+
 ---
 
 ## Expanded view
@@ -224,7 +248,7 @@ Installing a provider is not enough. Nothing flows until the user approves it, a
 3. **Pinning.** Essentials stores the provider's signing certificate. Every connect re-checks both: the provider only serves a caller whose package and certificate match its stored grant, and Essentials only binds a provider whose certificate still matches.
 4. **No grant, no data.** Every binder call is checked against the grant, including `attach`, actions and surface requests. If the provider reports it is not authorised, Essentials turns the provider off and stops retrying.
 5. **Revocation.** Turning the provider off in Essentials calls `revokeHost()`. A provider can also revoke from its own settings with `HostGrantStore.revoke(hostPackage)`; Overcast lists approved hosts with a switch for this.
-6. **Sanitising.** Everything a provider sends passes `PayloadValidator`: at most 6 items and 4 Brief cards, keys up to 64 characters, cell text up to 32, line text up to 120, expanded height 80 to 640 dp, icons up to 256 px and 48 of them within 4 MB, unknown tones fall back to `none`. Providers can only open their own app.
+6. **Sanitising.** Everything a provider sends passes `PayloadValidator`: at most 6 items, 4 Brief cards and one attachment per anchor (40 to 240 dp), keys up to 64 characters, cell text up to 32, line text up to 120, expanded height 80 to 640 dp, icons up to 256 px and 48 of them within 4 MB, unknown tones fall back to `none`. Providers can only open their own app.
 7. **No user data leaves.** The host sends only layout and theme values (`HostInfo`): accent, density, island size, whether power saving is on.
 
 The host never executes provider code. The only provider code that runs in Essentials' window is a surface the provider draws in its own process.

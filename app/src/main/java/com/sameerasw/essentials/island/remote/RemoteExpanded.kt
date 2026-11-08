@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,16 +80,37 @@ fun RemoteExpanded(
     val paused = LocalRemotePaused.current
     val dragging by remember { derivedStateOf { collapse() > 0.02f || paused() } }
     val showLive = revealed && !dragging && session.hasSurface
-    val fade by animateFloatAsState(if (showLive) 1f else 0f, if (showLive) motionTween(160) else snap(), label = "remoteFade")
     val cornerPx = with(density) { scope.spec.expandedCorner.toPx() }
-    val current = remember { intArrayOf(0, 0) }
-    val corner = remember { floatArrayOf(0f) }
     val interactive by rememberUpdatedState(revealed && !dragging)
-    Box(
-        size.pointerInput(session) {
+    RemoteSurfaceBox(
+        session = session,
+        widthPx = widthPx,
+        heightPx = heightPx,
+        cornerPx = cornerPx,
+        showLive = showLive,
+        snapshot = snapshot,
+        modifier = size.pointerInput(session) {
             detectTapGestures { if (interactive) session.tap(it.x, it.y) }
         },
-    ) {
+    )
+}
+
+/** The provider's live surface over its last snapshot. The snapshot shows whenever [showLive] is false. */
+@RequiresApi(Build.VERSION_CODES.R)
+@Composable
+internal fun RemoteSurfaceBox(
+    session: RemoteSurfaceSession,
+    widthPx: Int,
+    heightPx: Int,
+    cornerPx: Float,
+    showLive: Boolean,
+    snapshot: ImageBitmap?,
+    modifier: Modifier = Modifier,
+) {
+    val fade by animateFloatAsState(if (showLive) 1f else 0f, if (showLive) motionTween(160) else snap(), label = "remoteFade")
+    val current = remember { intArrayOf(0, 0) }
+    val corner = remember { floatArrayOf(0f) }
+    Box(modifier) {
     snapshot?.let {
         Image(
             bitmap = it,
