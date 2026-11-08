@@ -41,6 +41,8 @@ object RemoteAttachments {
                     cornerPx = minOf(with(density) { IslandAttachment.CORNER.toPx() }, heightPx / 2f),
                     showLive = settled && session.hasSurface,
                     snapshot = handler.snapshot(surfaceKey),
+                    // The slot paints the body (black, or the layered player's translucent gradient) under the surface
+                    aboveHost = true,
                     modifier = size.pointerInput(session) {
                         detectTapGestures { if (interactive) session.tap(it.x, it.y) }
                     },

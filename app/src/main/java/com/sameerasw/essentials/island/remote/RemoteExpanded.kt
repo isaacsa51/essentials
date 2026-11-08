@@ -106,6 +106,9 @@ internal fun RemoteSurfaceBox(
     showLive: Boolean,
     snapshot: ImageBitmap?,
     modifier: Modifier = Modifier,
+    // Above the host window instead of behind it: no hole is punched, so what the host paints under the surface
+    // (an attachment's black or translucent body) shows through the provider's transparent pixels
+    aboveHost: Boolean = false,
 ) {
     val fade by animateFloatAsState(if (showLive) 1f else 0f, if (showLive) motionTween(160) else snap(), label = "remoteFade")
     val current = remember { intArrayOf(0, 0) }
@@ -123,7 +126,7 @@ internal fun RemoteSurfaceBox(
         modifier = Modifier.matchParentSize(),
         factory = { context ->
             SurfaceView(context).apply {
-                setZOrderMediaOverlay(true)
+                if (aboveHost) setZOrderOnTop(true) else setZOrderMediaOverlay(true)
                 holder.setFormat(PixelFormat.TRANSLUCENT)
                 outlineProvider = object : ViewOutlineProvider() {
                     override fun getOutline(view: View, outline: Outline) {
