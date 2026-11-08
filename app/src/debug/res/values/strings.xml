@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_preview_title">Media Player Studio</string>
+    <string name="media_preview_custom">Custom renderer</string>
+    <string name="media_preview_background">Background</string>
+    <string name="media_preview_effects">Particle effect</string>
+    <string name="media_preview_falloff">Opacity falloff</string>
+    <string name="media_preview_falloff_help">0: no distance fading · 1: base curve · higher: faster fade</string>
+    <string name="media_preview_overall_opacity">Overall particle opacity</string>
+    <string name="media_preview_diamond">Diamond points</string>
+    <string name="media_preview_point_radius">Maximum point radius</string>
+    <string name="media_preview_min_radius">Minimum point radius</string>
+    <string name="media_preview_flow_speed">Flow speed</string>
+    <string name="media_preview_frequency">Wave frequency</string>
+    <string name="media_preview_ingress">Inner ingress</string>
+    <string name="media_preview_spread">Outer spread</string>
+    <string name="media_preview_point_spacing">Minimum seed spacing</string>
+    <string name="media_preview_point_displacement">Flow displacement</string>
+    <string name="media_preview_reset">Reset</string>
+    <string name="media_preview_fit">Fit</string>
+    <string name="media_preview_dimensions">%1$d × %2$d dp</string>
+    <string name="media_preview_group_particles">Particles</string>
+    <string name="media_preview_group_player">Player &amp; scene</string>
+    <string name="media_preview_wallpaper">Wallpaper</string>
+    <string name="media_preview_art_controls">Artwork controls</string>
+    <string name="media_preview_mirror">Artwork on right</string>
+    <string name="media_preview_pulse">Notification pulse intensity</string>
+    <string name="media_preview_width">Card width</string>
+    <string name="media_preview_update">Simulate content update</string>
+    <string name="media_preview_host_test">Test Island transitions</string>
+    <string name="media_preview_host_pulse">Show pulse shadow on notification</string>
+    <string name="media_preview_host_back">Studio</string>
+    <string name="media_preview_host_expand">Expand</string>
+    <string name="media_preview_host_collapse">Collapse</string>
+    <string name="media_preview_host_update">Update</string>
+    <string name="media_preview_help">Valid numbers update the preview as you type. Done/Enter finishes editing. Fit shows the whole effect; 1:1 shows the actual size. These controls only affect the preview.</string>
+    <string name="media_preview_invalid_number">Enter a finite number</string>
+    <string name="media_preview_at_least">Must be at least %1$s</string>
+    <string name="media_preview_greater_than">Must be greater than %1$s</string>
+    <string name="media_preview_at_most">Must be at most %1$s</string>
+    <string name="media_preview_song">Windglass</string>
+    <string name="media_preview_artist">Lchavasse</string>
+</resources>

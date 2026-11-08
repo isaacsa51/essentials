@@ -500,6 +500,7 @@ class IslandCoordinator(
                         state, layoutSpec, actions, windowHost::onTargetBoundsChanged,
                         registerCollapseAnimator = { controller.collapseAnimator = it },
                         showCameraRing = ring,
+                        cameraGeometry = geometry,
                     )
                 }
             }

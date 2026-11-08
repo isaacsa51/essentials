@@ -145,6 +145,8 @@ class QueueInfo(
     val onAdvance: () -> Unit,
 )
 
+enum class ExpandedSurfaceStyle { Default, Layered }
+
 class IslandItem(
     val key: String,
     val priority: Int,
@@ -189,6 +191,7 @@ class IslandItem(
     val chip: Boolean = key in IslandChips.items,
     // Kept right of the camera, at the outer end of the compact island.
     val compactEndSide: Boolean = false,
+    val expandedSurfaceStyle: ExpandedSurfaceStyle = ExpandedSurfaceStyle.Default,
 ) {
     var userPriority: Int? = null
 
@@ -229,6 +232,7 @@ class IslandItem(
         priorityGroup = priorityGroup,
         chip = chip,
         compactEndSide = compactEndSide,
+        expandedSurfaceStyle = expandedSurfaceStyle,
     ).also {
         it.userPriority = userPriority
         it.inBubble = inBubble

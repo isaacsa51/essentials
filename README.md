@@ -2,6 +2,13 @@
 
 Essential tools, mods and workarounds for Pixels and other Androids
 
+## Local Island Media customization
+
+This checkout contains personal, local-only Island Media changes. **Do not push or publish this checkout to any remote repository.** See [AGENTS.md](AGENTS.md) for the repository policy and [Island Media UI](island-media-ui/README.md) for renderer architecture, particle defaults, camera protection, motion, and debug preview instructions.
+
+The combined local patch is based on upstream commit `d3e6d7c90510cfdcd807d6ca0827f1131e600135`. Apply `island-media-local.patch` to a clean checkout at that commit with `git apply --check` followed by `git apply`. It includes personal commits and current source/test/documentation changes, including binary debug assets; it excludes build outputs and local machine configuration.
+
+
 
 <p align="center">
 <img width="99%" alt="essentials" src="https://github.com/user-attachments/assets/b14e1067-a414-42fd-80c5-6d1f6086ab38" />
