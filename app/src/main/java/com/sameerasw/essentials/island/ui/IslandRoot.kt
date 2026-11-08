@@ -1087,7 +1087,7 @@ private fun IslandRootContent(
             outlineColor = outlineFor(1f)?.takeUnless { focusedItem?.expandedSurfaceStyle == ExpandedSurfaceStyle.Layered },
             outlineThickness = spec.outlineThickness,
             onSizeChanged = { attachmentSize = it },
-            translucent = focusedItem?.translucentSurface == true,
+            translucent = focusedItem?.translucentAttachment == true,
             cardBounds = { size ->
                 // The card sits right above the slot, as wide, ending one gap (and the queue pill) up
                 val bottom = -attachmentGapAbove().toFloat()

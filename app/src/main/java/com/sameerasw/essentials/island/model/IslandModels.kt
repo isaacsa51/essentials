@@ -192,8 +192,8 @@ class IslandItem(
     // Kept right of the camera, at the outer end of the compact island.
     val compactEndSide: Boolean = false,
     val expandedSurfaceStyle: ExpandedSurfaceStyle = ExpandedSurfaceStyle.Default,
-    // The expanded surface lets what's behind the island show through; shapes bonded to it (attachments) match it
-    val translucentSurface: Boolean = false,
+    // Attachments under this item (such as lyrics) use a translucent gradient body instead of solid black
+    val translucentAttachment: Boolean = false,
 ) {
     var userPriority: Int? = null
 
@@ -235,7 +235,7 @@ class IslandItem(
         chip = chip,
         compactEndSide = compactEndSide,
         expandedSurfaceStyle = expandedSurfaceStyle,
-        translucentSurface = translucentSurface,
+        translucentAttachment = translucentAttachment,
     ).also {
         it.userPriority = userPriority
         it.inBubble = inBubble
