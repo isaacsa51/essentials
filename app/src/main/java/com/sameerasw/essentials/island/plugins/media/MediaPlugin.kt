@@ -1,7 +1,7 @@
 package com.sameerasw.essentials.island.plugins.media
 
 import com.sameerasw.island.media.ui.DefaultMediaPlayerRenderer
-import com.sameerasw.island.media.ui.IslandMediaPlayerRenderer
+import com.sameerasw.island.media.ui.LayeredMediaPlayerRenderer
 import com.sameerasw.essentials.island.model.StackIcon
 import com.sameerasw.essentials.island.model.ExpandedSurfaceStyle
 import com.sameerasw.essentials.island.model.IslandStage
@@ -61,6 +61,9 @@ class MediaPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH,
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION,
         SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER,
+        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PARTICLES,
+        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT,
+        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_ARTWORK,
     )
 
     private val ART_RETRY_DELAYS_MS = longArrayOf(1500L, 3000L)
@@ -245,7 +248,17 @@ class MediaPlugin : BaseIslandPlugin() {
         val playerStyle = MediaPlayerStyle.from(settings.getIslandMediaPlayerStyle())
         // The layered player (translucent surface, particles, progressive pulse blur) or the original one
         val layered = settings.isIslandMediaLayeredPlayerEnabled()
-        val backdrop = if (settings.isIslandMediaBlurBackgroundEnabled()) {
+        val renderer = if (layered) {
+            LayeredMediaPlayerRenderer(
+                particles = settings.isIslandMediaLayeredParticlesEnabled(),
+                translucent = settings.isIslandMediaLayeredTranslucentEnabled(),
+            )
+        } else {
+            DefaultMediaPlayerRenderer
+        }
+        // Each player has its own artwork background toggle; the blur sliders are shared
+        val showArtwork = if (layered) settings.isIslandMediaLayeredArtworkEnabled() else settings.isIslandMediaBlurBackgroundEnabled()
+        val backdrop = if (showArtwork) {
             ArtworkBlur(settings.getIslandMediaBlurSourceWidth(), settings.getIslandMediaBlurSaturation())
         } else {
             null
@@ -291,7 +304,7 @@ class MediaPlugin : BaseIslandPlugin() {
                 ),
                 expanded = ExpandedContent { scope ->
                     MediaExpanded(t.title, t.artist, t.artwork, mediaAccent(t.accent?.let { Color(it) }), isPlaying, isLiked, actions, scope, canSkipBack = canSkipBack, canSkipForward = canSkipForward, packageName = t.packageName, style = playerStyle, backdrop = backdrop,
-                        renderer = if (layered) IslandMediaPlayerRenderer else DefaultMediaPlayerRenderer)
+                        renderer = renderer)
                 },
                 accent = artAccent,
                 onOpen = { openPlayer() },
