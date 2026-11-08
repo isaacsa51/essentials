@@ -234,6 +234,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.gson)
     implementation(project(":island-sdk"))
+    implementation(project(":island-media-ui"))
 
     // Kotlin Reflect for dynamic sealed class serialization
     implementation(kotlin("reflect"))

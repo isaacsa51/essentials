@@ -42,7 +42,6 @@ class IslandWindowHost(
     private var stage = IslandStage.Hidden
     private var textInput = false
     private var interactionsDisabled = false
-
     var maxWidthPx: Int = 0
 
     var hiddenTouch: ((MotionEvent) -> Boolean)? = null
@@ -112,6 +111,7 @@ class IslandWindowHost(
         textInput = active
         val lp = drawParams ?: return
         val view = drawRoot ?: return
+        applyDrawSize(lp)
         val inert = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         lp.flags = if (active) lp.flags and inert.inv() else lp.flags or inert
         lp.softInputMode = if (active) {
@@ -188,16 +188,28 @@ class IslandWindowHost(
 
     private fun applyDrawSize(lp: WindowManager.LayoutParams) {
         val geo = geometry ?: return
-        val reach = maxWidthPx + 32 * density
-        val width = if (geo.anchor == CameraAnchor.Center) {
-            (2 * maxOf(geo.centerX, geo.screenWidth - geo.centerX)).roundToInt()
-        } else {
-            (reach * 2).roundToInt()
+        if (textInput) {
+            // Input-capable plugins keep the original bounded input window. They do not host
+            // detached media visuals, and must not intercept the rest of the display.
+            val reach = maxWidthPx + 32 * density
+            val width = if (geo.anchor == CameraAnchor.Center) {
+                (2 * maxOf(geo.centerX, geo.screenWidth - geo.centerX)).roundToInt()
+            } else {
+                (reach * 2).roundToInt()
+            }
+            lp.width = width
+            lp.height = if (geo.screenWidth > geo.screenHeight) geo.screenHeight else (geo.screenHeight * 0.6f).roundToInt()
+            lp.x = (geo.centerX - width / 2f).roundToInt()
+            lp.y = 0
+            return
         }
-        lp.width = width
-        lp.height = if (geo.screenWidth > geo.screenHeight) geo.screenHeight else (geo.screenHeight * 0.6f).roundToInt()
-        lp.x = (geo.centerX - width / 2f).roundToInt()
-        lp.y = 0
+        // Visual bounds belong to the display, never to the current card or particle style.
+        // This window is non-touchable; the small forwarded touch window remains unchanged.
+        val viewport = islandDrawViewport(geo)
+        lp.width = viewport.width
+        lp.height = viewport.height
+        lp.x = viewport.left
+        lp.y = viewport.top
     }
 
     private fun layoutDrawWindow() {

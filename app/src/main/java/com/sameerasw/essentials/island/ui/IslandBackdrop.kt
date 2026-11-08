@@ -15,6 +15,7 @@ class IslandBackdropSlot {
 }
 
 val LocalIslandCollapse = staticCompositionLocalOf<() -> Float> { { 0f } }
+val LocalIslandPulse = staticCompositionLocalOf<() -> Float> { { 0f } }
 
 val LocalIslandBackdropSlot = staticCompositionLocalOf<IslandBackdropSlot?> { null }
 

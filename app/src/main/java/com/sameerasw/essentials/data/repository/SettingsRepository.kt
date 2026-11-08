@@ -734,6 +734,7 @@ class SettingsRepository(
         const val KEY_ISLAND_MEDIA_BLUR_BACKGROUND = "island_media_blur_background"
         const val KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH = "island_media_blur_source_width"
         const val KEY_ISLAND_MEDIA_BLUR_SATURATION = "island_media_blur_saturation"
+        const val KEY_ISLAND_MEDIA_LAYERED_PLAYER = "island_media_layered_player"
         const val KEY_ISLAND_MEDIA_PLAYER_STYLE = "island_media_player_style"
         const val KEY_ISLAND_MEDIA_SHOW_LIKE = "island_media_show_like"
         const val KEY_ISLAND_NOTIF_CONDENSED_INFO = "island_notif_condensed_info"
@@ -4580,6 +4581,10 @@ class SettingsRepository(
     fun getIslandMediaBlurSaturation(): Float = getFloat(KEY_ISLAND_MEDIA_BLUR_SATURATION, 1.35f)
 
     fun setIslandMediaBlurSaturation(saturation: Float) = putFloat(KEY_ISLAND_MEDIA_BLUR_SATURATION, saturation)
+
+    fun isIslandMediaLayeredPlayerEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_PLAYER, false)
+
+    fun setIslandMediaLayeredPlayerEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_PLAYER, enabled)
 
     fun getIslandMediaPlayerStyle(): String = getString(KEY_ISLAND_MEDIA_PLAYER_STYLE, null) ?: "default"
 

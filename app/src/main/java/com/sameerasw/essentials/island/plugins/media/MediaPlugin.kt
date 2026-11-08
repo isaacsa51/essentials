@@ -1,6 +1,9 @@
 package com.sameerasw.essentials.island.plugins.media
 
+import com.sameerasw.island.media.ui.DefaultMediaPlayerRenderer
+import com.sameerasw.island.media.ui.IslandMediaPlayerRenderer
 import com.sameerasw.essentials.island.model.StackIcon
+import com.sameerasw.essentials.island.model.ExpandedSurfaceStyle
 import com.sameerasw.essentials.island.model.IslandStage
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.Modifier
@@ -57,6 +60,7 @@ class MediaPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_BACKGROUND,
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH,
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION,
+        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER,
     )
 
     private val ART_RETRY_DELAYS_MS = longArrayOf(1500L, 3000L)
@@ -239,6 +243,8 @@ class MediaPlugin : BaseIslandPlugin() {
         }
         val artAccent = artAccent(t)
         val playerStyle = MediaPlayerStyle.from(settings.getIslandMediaPlayerStyle())
+        // The layered player (translucent surface, particles, progressive pulse blur) or the original one
+        val layered = settings.isIslandMediaLayeredPlayerEnabled()
         val backdrop = if (settings.isIslandMediaBlurBackgroundEnabled()) {
             ArtworkBlur(settings.getIslandMediaBlurSourceWidth(), settings.getIslandMediaBlurSaturation())
         } else {
@@ -261,6 +267,7 @@ class MediaPlugin : BaseIslandPlugin() {
         publish(
             IslandItem(
                 key = ITEM_KEY,
+                expandedSurfaceStyle = if (layered) ExpandedSurfaceStyle.Layered else ExpandedSurfaceStyle.Default,
                 priority = IslandPriority.MEDIA,
                 placement = CompactPlacement.Dynamic,
                 compactEndSide = true,
@@ -283,7 +290,8 @@ class MediaPlugin : BaseIslandPlugin() {
                     endSlot = { EqualizerBars(isPlaying, mediaAccent(artAccent)) },
                 ),
                 expanded = ExpandedContent { scope ->
-                    MediaExpanded(t.title, t.artist, t.artwork, mediaAccent(t.accent?.let { Color(it) }), isPlaying, isLiked, actions, scope, canSkipBack = canSkipBack, canSkipForward = canSkipForward, packageName = t.packageName, style = playerStyle, backdrop = backdrop)
+                    MediaExpanded(t.title, t.artist, t.artwork, mediaAccent(t.accent?.let { Color(it) }), isPlaying, isLiked, actions, scope, canSkipBack = canSkipBack, canSkipForward = canSkipForward, packageName = t.packageName, style = playerStyle, backdrop = backdrop,
+                        renderer = if (layered) IslandMediaPlayerRenderer else DefaultMediaPlayerRenderer)
                 },
                 accent = artAccent,
                 onOpen = { openPlayer() },

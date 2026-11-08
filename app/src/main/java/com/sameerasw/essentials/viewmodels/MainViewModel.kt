@@ -295,6 +295,7 @@ class MainViewModel : ViewModel() {
     val isIslandMediaBlurBackground = mutableStateOf(true)
     val islandMediaBlurSourceWidth = mutableIntStateOf(96)
     val islandMediaBlurSaturation = mutableFloatStateOf(1.35f)
+    val isIslandMediaLayeredPlayer = mutableStateOf(false)
     val islandMediaPlayerStyle = mutableStateOf("default")
     val isIslandMediaShowLike = mutableStateOf(true)
     val islandNotifPeekStyle = mutableStateOf(SettingsRepository.ISLAND_NOTIF_PEEK_STYLE_FULL)
@@ -996,6 +997,9 @@ class MainViewModel : ViewModel() {
 
                     SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION ->
                         islandMediaBlurSaturation.floatValue = settingsRepository.getIslandMediaBlurSaturation()
+
+                    SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER ->
+                        isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
 
                     SettingsRepository.KEY_ISLAND_MEDIA_PLAYER_STYLE ->
                         islandMediaPlayerStyle.value = settingsRepository.getIslandMediaPlayerStyle()
@@ -2627,6 +2631,7 @@ class MainViewModel : ViewModel() {
         isIslandMediaBlurBackground.value = settingsRepository.isIslandMediaBlurBackgroundEnabled()
         islandMediaBlurSourceWidth.intValue = settingsRepository.getIslandMediaBlurSourceWidth()
         islandMediaBlurSaturation.floatValue = settingsRepository.getIslandMediaBlurSaturation()
+        isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
         islandMediaPlayerStyle.value = settingsRepository.getIslandMediaPlayerStyle()
         isIslandMediaShowLike.value = settingsRepository.isIslandMediaShowLikeEnabled()
         islandNotifPeekStyle.value = settingsRepository.getIslandNotifPeekStyle()
@@ -6214,6 +6219,11 @@ class MainViewModel : ViewModel() {
     fun setIslandMediaBlurSaturation(saturation: Float) {
         islandMediaBlurSaturation.floatValue = saturation
         settingsRepository.setIslandMediaBlurSaturation(saturation)
+    }
+
+    fun setIslandMediaLayeredPlayer(enabled: Boolean) {
+        isIslandMediaLayeredPlayer.value = enabled
+        settingsRepository.setIslandMediaLayeredPlayerEnabled(enabled)
     }
 
     fun setIslandMediaShowLike(enabled: Boolean) {

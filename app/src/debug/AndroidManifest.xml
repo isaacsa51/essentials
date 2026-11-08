@@ -8,5 +8,10 @@
                 <action android:name="com.sameerasw.essentials.FAKE_LIVE_UPDATES" />
             </intent-filter>
         </receiver>
+        <activity
+            android:name="com.sameerasw.essentials.island.preview.MediaPlayerPreviewActivity"
+            android:exported="true"
+            android:label="@string/media_preview_title"
+            android:theme="@style/Theme.Essentials" />
     </application>
 </manifest>
