@@ -22,8 +22,8 @@ object IslandPriority {
     const val TIMER_OVERRIDE = 5
     const val CALENDAR_OVERRIDE = 6
 
+    const val PROGRESS = 8
     const val NOTIFICATION = 10
-        const val PROGRESS = 15
     const val FLASHLIGHT = 20
     const val NAVIGATION = 22
     const val TIMER = 25
@@ -78,6 +78,8 @@ interface IslandExpandedScope {
 
     // Call while the user is doing something
     fun keepAlive()
+
+    fun holdOpen(held: Boolean) {}
 }
 
 class ExpandedContent(val content: @Composable (IslandExpandedScope) -> Unit)
@@ -98,6 +100,8 @@ class StackIcon(
     val current: Boolean = false,
     val onSelect: (() -> Unit)? = null,
     val highlight: Boolean = false,
+    val fill: Boolean = false,
+    val widthFactor: Float = 1f,
     val content: @Composable (size: Dp) -> Unit,
 )
 
@@ -116,6 +120,7 @@ class SideBubble(
 
 object SideBubblePriority {
     const val NOTIFICATION = 0
+    const val PROGRESS = 10
 }
 object IslandChips {
     val items = setOf(
@@ -174,6 +179,9 @@ class IslandItem(
     val attachmentAnchor: String? = null,
     val attachmentTitle: String? = null,
     
+    val expandedQueueOnly: Boolean = false,
+    val queueAccent: Color? = null,
+
     val stack: List<StackIcon> = emptyList(),
     val queued: List<StackIcon>? = null,
     val priorityGroup: String? = null,
@@ -214,6 +222,8 @@ class IslandItem(
         hideExpandedQueue = hideExpandedQueue,
         attachmentAnchor = attachmentAnchor,
         attachmentTitle = attachmentTitle,
+        expandedQueueOnly = expandedQueueOnly,
+        queueAccent = queueAccent,
         stack = stack,
         queued = queued,
         priorityGroup = priorityGroup,
