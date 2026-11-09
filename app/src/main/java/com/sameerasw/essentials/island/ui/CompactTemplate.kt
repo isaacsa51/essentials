@@ -292,9 +292,12 @@ fun CompactTemplate(
         val limitLeft = CompactSideLimits.left.intValue
         val limitRight = CompactSideLimits.right.intValue
         val reserve = spacing + (spec.compactHeight.roundToPx() * OPTICAL_INSET_RATIO).toInt()
-        val bubbleNow = if (state.sideBubble != null) bubbleExtent().coerceAtLeast(0) else 0
-        com.sameerasw.essentials.island.state.CompactCellWidths.bubbleExtent =
-            if (state.sideBubble != null) maxOf(bubbleNow, com.sameerasw.essentials.island.state.CompactCellWidths.bubbleExtent) else 0
+        // Items win over the hub: reserve only its single-circle size; the hub spreads into what the items leave
+        val bubbleNow = if (state.sideBubble != null) {
+            minOf(bubbleExtent(), spec.compactHeight.roundToPx() + spec.cameraGap.roundToPx()).coerceAtLeast(0)
+        } else {
+            0
+        }
         val bodyLimitLeft = if (limitLeft == Int.MAX_VALUE) limitLeft else (limitLeft - bubbleNow).coerceAtLeast(0)
         val measuredSlots = arrayOfNulls<Placeable>(measurables.size)
         fun measureBudgeted(order: List<Int>, limit: Int) {

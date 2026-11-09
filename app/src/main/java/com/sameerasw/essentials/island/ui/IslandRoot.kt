@@ -152,6 +152,9 @@ private data class ContentKey(val stage: IslandStage, val itemKey: String?)
 
 private const val COLLAPSE_COMMIT = 0.2f
 
+// Same 8dp the island keeps from each screen edge
+private val HUB_SCREEN_MARGIN = 8.dp
+
 private enum class SwipeIntent { Hide, Dismiss }
 
 // The window never moves; the surface is always horizontally centred in it (= on the camera).
@@ -686,22 +689,28 @@ private fun IslandRootContent(
     val slackTarget = if (feedbackTakeover && stage == IslandStage.Compact) 0 else compactSlack.intValue
     val compactBaseWidth = remember { mutableIntStateOf(0) }
     val compactNeedLeft = remember { mutableIntStateOf(-1) }
+    // The hub spreads into the room the items leave, up to the chosen icon count (0 = as many as fit).
+    // The value is in slots, and the +N counter takes one of its own on top of the chosen icons.
     val bubbleMaxIcons = lastCatchUp?.maxIcons?.let { chosen ->
-        if (chosen > 0) {
-            chosen
+        val sizePx = with(density) { spec.compactHeight.toPx() }
+        val gap = with(density) { spec.cameraGap.toPx() }
+        val needLeft = compactNeedLeft.intValue
+        val iconCount = lastCatchUp?.icons?.size ?: 0
+        // The hub sits outside the pill, so its room runs to the screen edge, not the island's max width
+        val sideRoom = if (windowWidth > 0) {
+            (windowWidth - cameraSlotPx) / 2f - with(density) { HUB_SCREEN_MARGIN.toPx() }
         } else {
-            val sizePx = with(density) { spec.compactHeight.toPx() }
-            val budget = with(density) { spec.lineWidth.toPx() }
-            val gap = with(density) { spec.cameraGap.toPx() }
-            val needLeft = compactNeedLeft.intValue
-            // Balanced, the bubble's room grows the pill on the far side, so only the near side's content eats into the budget
-            val room = if (needLeft >= 0) {
-                (budget - cameraSlotPx) / 2f - needLeft - gap
-            } else {
-                (budget - maxOf(fallbackCompact.width, compactBaseWidth.intValue)) - gap
-            }
-            (((room - sizePx) / (sizePx * 0.55f)).toInt() + 1).coerceIn(1, 8)
+            with(density) { spec.lineWidth.toPx() - cameraSlotPx } / 2f
         }
+        val room = if (needLeft >= 0) {
+            sideRoom - needLeft - gap
+        } else {
+            sideRoom * 2f - maxOf(fallbackCompact.width, compactBaseWidth.intValue) - gap
+        }
+        val counter = if (iconCount > 1) sizePx * 0.3f else 0f
+        val fit = (((room - sizePx - counter) / (sizePx * 0.55f)).toInt() + 1).coerceIn(1, 8)
+        val cap = if (chosen > 0) chosen + if (iconCount > chosen) 1 else 0 else fit
+        minOf(cap, fit)
     } ?: OVERLAP_MAX
     val sideBubbleWidth = lastCatchUp
         ?.takeIf { spec.queueStyle == QueueStyle.Overlap && it.content == null && it.icons.isNotEmpty() }

@@ -44,7 +44,7 @@ class IslandController(
     val state: StateFlow<IslandUiState> = _state.asStateFlow()
 
     var maxCells: Int = CompactLayoutEngine.MAX_CELLS
-    var compactFits: ((before: List<String>, after: List<String>, leftExtra: Int, growing: Boolean) -> Int?)? = null
+    var compactFits: ((before: List<String>, after: List<String>, leftExtra: Int, growLeft: Boolean, growRight: Boolean) -> Int?)? = null
     var maxItems: Int = Int.MAX_VALUE
     var compactCellWidth: (String) -> Float = { 1f }
     var compactBubbleWidth: (Int) -> Float = { it.toFloat() }
@@ -418,7 +418,8 @@ class IslandController(
                     item.compactEndSide,
                 )
             }
-        val sideExtra = (merged ?: bubbleOwner?.sideBubble)?.cells?.coerceAtLeast(1) ?: 0
+        // Items are laid out first: an overlap hub counts as one circle here and spreads into whatever room they leave
+        val sideExtra = (merged ?: bubbleOwner?.sideBubble)?.let { if (secondaryBubbleOverlap) 1 else it.cells.coerceAtLeast(1) } ?: 0
         fun arrange(list: List<CompactEntry>, endCells: Int, itemCap: Int = maxItems) = CompactLayoutEngine.arrange(
             list,
             anchorProvider(),
@@ -442,7 +443,7 @@ class IslandController(
                 val extra = sideExtra
                 val shown = (_state.value.arrangement.before + _state.value.arrangement.after).toSet()
                 val wrapped: (List<String>, List<String>) -> Int? = { before, after ->
-                    fits(before, after, extra, (before + after).any { it !in shown })
+                    fits(before, after, extra, before.any { it !in shown }, after.any { it !in shown })
                 }
                 wrapped
             },

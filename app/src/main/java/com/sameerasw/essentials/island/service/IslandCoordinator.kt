@@ -525,7 +525,8 @@ class IslandCoordinator(
             focusedKey = { controller.state.value.focusedKey },
         )
         latestItems.clear()
-        userPriorities = resolvePriorities()
+        // Loads bubble membership too, not just priorities, or bubbled items stay inline until a setting changes
+        reloadPriorities()
         plugins.forEach { plugin ->
             plugin.start(context)
             newScope.launch { plugin.items.collect { publishItems(plugin.id, it) } }
@@ -833,9 +834,6 @@ class IslandCoordinator(
         mainHandler.removeCallbacks(statusBarPoll)
         controller.compactFits = ::fitsCompactWidth
         controller.compactCellWidth = ::compactCellUnits
-        controller.compactBubbleWidth = { cells ->
-            maxOf(cells.toFloat(), ((CompactCellWidths.bubbleExtent / compactCellUnitPx().coerceAtLeast(1f)) * 4f).roundToInt() / 4f)
-        }
         CompactCellWidths.onChange = {
             mainHandler.removeCallbacks(widthRelayout)
             mainHandler.post(widthRelayout)
@@ -892,7 +890,7 @@ class IslandCoordinator(
         return (((px + (geometry?.gap ?: 0f)) / unit) * 4f).roundToInt() / 4f
     }
 
-    private fun fitsCompactWidth(before: List<String>, after: List<String>, leftExtra: Int, growing: Boolean): Int? {
+    private fun fitsCompactWidth(before: List<String>, after: List<String>, leftExtra: Int, growLeft: Boolean, growRight: Boolean): Int? {
         val geo = geometry ?: return 0
         val density = service.resources.displayMetrics.density
         val cell = geo.diameter.toInt()
@@ -900,11 +898,13 @@ class IslandCoordinator(
         val inset = (geo.compactHeight * 0.15f).toInt()
         fun need(keys: List<String>, extra: Int): Int =
             if (keys.isEmpty() && extra == 0) 0 else keys.sumOf { CompactCellWidths.get(it) ?: cell } + spacing * keys.size + inset +
-                if (extra > 0) maxOf(CompactCellWidths.bubbleExtent, extra * (cell + spacing)) else 0
-        val slack = if (growing) (GROW_SLACK_DP * density).toInt() else 0
+                // A bubble is a full compact-height circle, wider than a cell
+                if (extra > 0) geo.compactHeight.toInt() + spacing + (extra - 1) * (cell + spacing) else 0
+        // Headroom only on a side that gains cells; an unchanged side that already fits must not get squeezed out
+        val slack = (GROW_SLACK_DP * density).toInt()
         val (leftRoom, rightRoom) = sideRooms()
-        val left = if (leftRoom == Int.MAX_VALUE) leftRoom else leftRoom - slack
-        val right = if (rightRoom == Int.MAX_VALUE) rightRoom else rightRoom - slack
+        val left = if (leftRoom == Int.MAX_VALUE || !growLeft) leftRoom else leftRoom - slack
+        val right = if (rightRoom == Int.MAX_VALUE || !growRight) rightRoom else rightRoom - slack
         val needLeft = need(before, leftExtra)
         val needRight = need(after, 0)
         if (needLeft > left || needRight > right) return null

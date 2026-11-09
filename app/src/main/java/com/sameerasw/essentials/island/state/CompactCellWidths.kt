@@ -20,14 +20,6 @@ object CompactCellWidths {
 
     fun get(cellKey: String): Int? = widths[cellKey]
 
-    @Volatile
-    var bubbleExtent: Int = 0
-        set(value) {
-            val changed = kotlin.math.abs(field - value) > JITTER_PX
-            field = value
-            if (changed) onChange?.invoke()
-        }
-
     private const val JITTER_PX = 4
 }
 
