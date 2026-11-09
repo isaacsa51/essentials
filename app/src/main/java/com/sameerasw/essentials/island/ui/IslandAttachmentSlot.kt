@@ -1,7 +1,6 @@
 package com.sameerasw.essentials.island.ui
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,11 +23,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.scale
 import com.sameerasw.essentials.island.model.IslandAttachment
 import kotlin.math.roundToInt
 
@@ -103,7 +99,7 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                .background(Color.Black)
+                // Transparent body: only the light from the top is painted
                 .drawBehind { glowColor?.let { drawTopGlow(it) } }
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
@@ -112,30 +108,20 @@ fun IslandAttachmentSlot(
     }
 }
 
-// Peak strength of the glow at the top centre, and how far it reaches: half the body width across, past the bottom down
+// Strength of the light along the top edge, and how far down it reaches as a fraction of the body height
 private const val GLOW_ALPHA = 0.38f
-private const val GLOW_WIDTH = 0.42f
-private const val GLOW_DEPTH = 1.15f
+private const val GLOW_DEPTH = 0.9f
 
-/** A soft light falling from the top centre: an elliptical radial fade of [color], strongest at the top edge. */
+/** A soft light falling from the top edge across the full width: [color] fading down to transparent. */
 private fun DrawScope.drawTopGlow(color: Color) {
-    val w = size.width
-    val h = size.height
-    if (w <= 0f || h <= 0f) return
-    val radius = h * GLOW_DEPTH
-    val center = Offset(w / 2f, 0f)
-    // Draw a circle-based fade, then stretch it sideways into the ellipse
-    scale(scaleX = (w * GLOW_WIDTH) / radius, scaleY = 1f, pivot = center) {
-        drawRect(
-            brush = Brush.radialGradient(
-                0f to color.copy(alpha = GLOW_ALPHA),
-                0.45f to color.copy(alpha = GLOW_ALPHA * 0.5f),
-                1f to Color.Transparent,
-                center = center,
-                radius = radius,
-            ),
-            topLeft = Offset(center.x - radius, 0f),
-            size = Size(radius * 2f, h),
-        )
-    }
+    if (size.width <= 0f || size.height <= 0f) return
+    drawRect(
+        Brush.verticalGradient(
+            0f to color.copy(alpha = GLOW_ALPHA),
+            0.4f to color.copy(alpha = GLOW_ALPHA * 0.45f),
+            1f to Color.Transparent,
+            startY = 0f,
+            endY = size.height * GLOW_DEPTH,
+        ),
+    )
 }
