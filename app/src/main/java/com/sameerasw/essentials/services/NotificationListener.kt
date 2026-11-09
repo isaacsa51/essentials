@@ -1885,7 +1885,8 @@ class NotificationListener : NotificationListenerService() {
     fun extractProgressNotification(sbn: StatusBarNotification): ProgressNotificationData? {
         val notif = sbn.notification ?: return null
         val extras = notif.extras ?: return null
-        val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+        val segmentLengths = progressSegmentLengths(extras)
+        val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0).takeIf { it > 0 } ?: segmentLengths.sum()
         val current = extras.getInt(Notification.EXTRA_PROGRESS, 0)
         val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
 
@@ -1943,8 +1944,25 @@ class NotificationListener : NotificationListenerService() {
                     NotificationActionItem(title = title, pendingIntent = intent, actionKey = "${sbn.key}_$title")
                 }
             },
+            segments = segmentLengths.takeIf { it.size > 1 }?.let { lengths ->
+                val total = lengths.sum().toFloat()
+                lengths.map { it / total }
+            }.orEmpty(),
         )
     }
+
+    // Android 16 Notification.ProgressStyle stores segments as a Bundle list ("length", "colorInt", "id").
+    // Literal keys so this compiles and reads on any API level.
+    private fun progressSegmentLengths(extras: android.os.Bundle): List<Int> =
+        try {
+            @Suppress("DEPRECATION")
+            extras.getParcelableArrayList<android.os.Bundle>("android.progressSegments")
+                ?.map { it.getInt("length", 0) }
+                ?.filter { it > 0 }
+                .orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     @Volatile
     private var progressDestroyed = false
@@ -2152,7 +2170,8 @@ class NotificationListener : NotificationListenerService() {
         if (!SettingsRepository(applicationContext).isIslandNotifKeepProgressEnabled()) return false
         val extras = sbn.notification?.extras ?: return false
         return extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0 ||
-            extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+            extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false) ||
+            progressSegmentLengths(extras).isNotEmpty()
     }
 
     fun hubAlertsAsync(onResult: (List<ActiveNotificationAlert>) -> Unit) {

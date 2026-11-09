@@ -1,6 +1,8 @@
 package com.sameerasw.essentials.island.plugins.progress
 
 import android.graphics.Bitmap
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +13,11 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.sameerasw.essentials.island.ui.IslandMotion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -37,6 +44,7 @@ fun ProgressExpanded(
     text: String?,
     progress: Float,
     indeterminate: Boolean,
+    segments: List<Float>,
     accent: Color,
     actions: List<NotificationActionItem>,
     onAction: (NotificationActionItem) -> Unit,
@@ -70,7 +78,9 @@ fun ProgressExpanded(
             }
             Spacer(Modifier.height(16.dp))
             val barModifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding)
-            if (indeterminate) {
+            if (segments.isNotEmpty() && !indeterminate) {
+                SegmentedProgressBar(progress, segments, accent, barModifier)
+            } else if (indeterminate) {
                 LinearWavyProgressIndicator(modifier = barModifier, color = accent, trackColor = Color.White.copy(alpha = 0.2f))
             } else {
                 LinearWavyProgressIndicator(
@@ -94,6 +104,29 @@ fun ProgressExpanded(
                     ConnectedItem({ onAction(action) }) { ConnectedTextLabel(action.title) }
                 },
             )
+        }
+    }
+}
+
+/** Mirrors Android 16 ProgressStyle: equal-height track split into gapped segments, filled up to [progress]. */
+@Composable
+private fun SegmentedProgressBar(progress: Float, segments: List<Float>, accent: Color, modifier: Modifier) {
+    val fraction by animateFloatAsState(progress.coerceIn(0f, 1f), IslandMotion.float(), label = "segmentProgress")
+    Canvas(modifier.height(6.dp)) {
+        val gap = 4.dp.toPx()
+        val h = size.height
+        val usable = size.width - gap * (segments.size - 1)
+        val track = Color.White.copy(alpha = 0.2f)
+        val radius = CornerRadius(h / 2f)
+        var x = 0f
+        var start = 0f
+        segments.forEach { share ->
+            val w = usable * share
+            drawRoundRect(track, Offset(x, 0f), Size(w, h), radius)
+            val filled = ((fraction - start) / share).coerceIn(0f, 1f)
+            if (filled > 0f) drawRoundRect(accent, Offset(x, 0f), Size(w * filled, h), radius)
+            x += w + gap
+            start += share
         }
     }
 }

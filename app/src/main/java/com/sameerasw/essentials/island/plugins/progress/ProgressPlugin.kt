@@ -184,6 +184,7 @@ class ProgressPlugin : BaseIslandPlugin() {
                         text = d.text,
                         progress = progress,
                         indeterminate = indeterminate,
+                        segments = d.segments,
                         accent = islandAccent(),
                         actions = d.actions,
                         onAction = { action ->

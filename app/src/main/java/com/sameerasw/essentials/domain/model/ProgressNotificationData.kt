@@ -25,4 +25,6 @@ data class ProgressNotificationData(
     val contentIntent: PendingIntent? = null,
     val actions: List<NotificationActionItem> = emptyList(),
     val shortText: String? = null,
+    /** Android 16 ProgressStyle segment lengths, as fractions of the whole bar. Empty for a plain bar. */
+    val segments: List<Float> = emptyList(),
 )
