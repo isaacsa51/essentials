@@ -1087,12 +1087,8 @@ private fun IslandRootContent(
             outlineColor = outlineFor(1f)?.takeUnless { focusedItem?.expandedSurfaceStyle == ExpandedSurfaceStyle.Layered },
             outlineThickness = spec.outlineThickness,
             onSizeChanged = { attachmentSize = it },
-            translucent = focusedItem?.translucentAttachment == true,
-            cardBounds = { size ->
-                // The card sits right above the slot, as wide, ending one gap (and the queue pill) up
-                val bottom = -attachmentGapAbove().toFloat()
-                Rect(0f, bottom - liveSurfaceHeight.intValue, size.width, bottom)
-            },
+            // Soft light in the item's colour, falling from the top of the attachment
+            glow = focusedItem?.accent ?: LocalIslandIconColor.current,
         )
         if (bond > 0.001f && lastCatchUp != null && catchUpAnim.value > 0.5f && !bubbleOnlyLayout) {
             Box(

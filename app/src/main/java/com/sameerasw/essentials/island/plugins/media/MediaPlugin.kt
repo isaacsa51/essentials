@@ -281,8 +281,6 @@ class MediaPlugin : BaseIslandPlugin() {
             IslandItem(
                 key = ITEM_KEY,
                 expandedSurfaceStyle = if (layered) ExpandedSurfaceStyle.Layered else ExpandedSurfaceStyle.Default,
-                // The layered player's follows its Translucent container setting; the original player's always is
-                translucentAttachment = !layered || settings.isIslandMediaLayeredTranslucentEnabled(),
                 priority = IslandPriority.MEDIA,
                 placement = CompactPlacement.Dynamic,
                 compactEndSide = true,
