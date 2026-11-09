@@ -116,10 +116,12 @@ class SideBubble(
     val overflow: QueueOverflow = QueueOverflow.Number,
     // Compact cells' worth of room the bubble takes beside the camera
     val cells: Int = 1,
+    val soloIcons: List<StackIcon>? = null,
 )
 
 object SideBubblePriority {
     const val NOTIFICATION = 0
+    const val MEDIA = 5
     const val PROGRESS = 10
 }
 object IslandChips {
@@ -192,6 +194,7 @@ class IslandItem(
     // Kept right of the camera, at the outer end of the compact island.
     val compactEndSide: Boolean = false,
     val expandedSurfaceStyle: ExpandedSurfaceStyle = ExpandedSurfaceStyle.Default,
+    val expandedParticles: Boolean = false,
 ) {
     var userPriority: Int? = null
 
@@ -233,6 +236,7 @@ class IslandItem(
         chip = chip,
         compactEndSide = compactEndSide,
         expandedSurfaceStyle = expandedSurfaceStyle,
+        expandedParticles = expandedParticles,
     ).also {
         it.userPriority = userPriority
         it.inBubble = inBubble

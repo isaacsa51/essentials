@@ -243,7 +243,10 @@ class MainViewModel : ViewModel() {
     val isIslandDisableInteractionsInFullscreen = mutableStateOf(false)
     val isIslandBondEdge = mutableStateOf(false)
     val isIslandBalanceCompact = mutableStateOf(true)
-    val isIslandStatusBarAwareWidth = mutableStateOf(true)
+    val isIslandNeuralExpressive = mutableStateOf(false)
+    val isIslandNeuralExpressiveAlways = mutableStateOf(false)
+    val isIslandTransparency = mutableStateOf(true)
+    val isIslandStatusBarAwareWidth = mutableStateOf(false)
     val isIslandStatusBarIgnoreNotifications = mutableStateOf(true)
     val isDebugUiMarginOverlay = mutableStateOf(false)
     val isIslandBalanceMirror = mutableStateOf(false)
@@ -299,6 +302,9 @@ class MainViewModel : ViewModel() {
     val isIslandMediaLayeredParticles = mutableStateOf(true)
     val isIslandMediaLayeredTranslucent = mutableStateOf(true)
     val isIslandMediaLayeredArtwork = mutableStateOf(false)
+    val isIslandMediaBubble = mutableStateOf(false)
+    val isIslandMediaBubbleWide = mutableStateOf(false)
+    val isIslandMediaBubbleFillArt = mutableStateOf(false)
     val islandMediaPlayerStyle = mutableStateOf("default")
     val isIslandMediaShowLike = mutableStateOf(true)
     val islandNotifPeekStyle = mutableStateOf(SettingsRepository.ISLAND_NOTIF_PEEK_STYLE_FULL)
@@ -323,6 +329,7 @@ class MainViewModel : ViewModel() {
     val isIslandOtpEnabled = mutableStateOf(false)
     val islandOtpTimeoutMs = mutableLongStateOf(60_000L)
     val isIslandShowGlow = mutableStateOf(true)
+    val islandGlowIntensity = mutableFloatStateOf(1f)
     val isIslandNotifThemedBubble = mutableStateOf(false)
     val isIslandBorderOutline = mutableStateOf(false)
     val islandBorderOutlineColor = mutableStateOf(SettingsRepository.ISLAND_BORDER_OUTLINE_DEFAULT_COLOR)
@@ -521,7 +528,7 @@ class MainViewModel : ViewModel() {
     val isShutUpLoading = mutableStateOf(false)
     val isShutUpAttemptShizukuRestart = mutableStateOf(true)
     val shutUpRestoreDelay = mutableIntStateOf(10)
-    val shutUpRestoreMode = mutableStateOf("Auto")
+    val shutUpRestoreMode = mutableStateOf("Notify")
     val shutUpKeyboard = mutableStateOf("")
     val shizukuAuthToken = mutableStateOf("")
     val edgeLightingSweepSelectedShapes = mutableStateOf<Set<String>>(emptySet())
@@ -2578,6 +2585,9 @@ class MainViewModel : ViewModel() {
         isIslandDisableInteractionsInFullscreen.value = settingsRepository.isIslandDisableInteractionsInFullscreenEnabled()
         isIslandBondEdge.value = settingsRepository.isIslandBondEdgeEnabled()
         isIslandBalanceCompact.value = settingsRepository.isIslandBalanceCompactEnabled()
+        isIslandNeuralExpressive.value = settingsRepository.isIslandNeuralExpressiveEnabled()
+        isIslandNeuralExpressiveAlways.value = settingsRepository.isIslandNeuralExpressiveAlwaysEnabled()
+        isIslandTransparency.value = settingsRepository.isIslandTransparencyEnabled()
         isIslandStatusBarAwareWidth.value = settingsRepository.isIslandStatusBarAwareWidthEnabled()
         isIslandStatusBarIgnoreNotifications.value = settingsRepository.isIslandStatusBarIgnoreNotificationsEnabled()
         isDebugUiMarginOverlay.value = settingsRepository.isDebugUiMarginOverlayEnabled()
@@ -2647,6 +2657,9 @@ class MainViewModel : ViewModel() {
         isIslandMediaLayeredParticles.value = settingsRepository.isIslandMediaLayeredParticlesEnabled()
         isIslandMediaLayeredTranslucent.value = settingsRepository.isIslandMediaLayeredTranslucentEnabled()
         isIslandMediaLayeredArtwork.value = settingsRepository.isIslandMediaLayeredArtworkEnabled()
+        isIslandMediaBubble.value = settingsRepository.isIslandMediaBubbleEnabled()
+        isIslandMediaBubbleWide.value = settingsRepository.isIslandMediaBubbleWideEnabled()
+        isIslandMediaBubbleFillArt.value = settingsRepository.isIslandMediaBubbleFillArtEnabled()
         islandMediaPlayerStyle.value = settingsRepository.getIslandMediaPlayerStyle()
         isIslandMediaShowLike.value = settingsRepository.isIslandMediaShowLikeEnabled()
         islandNotifPeekStyle.value = settingsRepository.getIslandNotifPeekStyle()
@@ -2671,6 +2684,7 @@ class MainViewModel : ViewModel() {
         isIslandOtpEnabled.value = settingsRepository.isIslandOtpEnabled()
         islandOtpTimeoutMs.longValue = settingsRepository.getIslandOtpTimeoutMs()
         isIslandShowGlow.value = settingsRepository.isIslandShowGlowEnabled()
+        islandGlowIntensity.floatValue = settingsRepository.getIslandGlowIntensity()
         isIslandNotifThemedBubble.value = settingsRepository.isIslandNotifThemedBubbleEnabled()
         isIslandBorderOutline.value = settingsRepository.isIslandBorderOutlineEnabled()
         islandBorderOutlineColor.value = settingsRepository.getIslandBorderOutlineColor()
@@ -6077,6 +6091,22 @@ class MainViewModel : ViewModel() {
         settingsRepository.setIslandBalanceCompactEnabled(enabled)
     }
 
+    fun setIslandNeuralExpressive(enabled: Boolean) {
+        isIslandNeuralExpressive.value = enabled
+        settingsRepository.setIslandNeuralExpressiveEnabled(enabled)
+    }
+
+    fun setIslandNeuralExpressiveAlways(enabled: Boolean) {
+        isIslandNeuralExpressiveAlways.value = enabled
+        settingsRepository.setIslandNeuralExpressiveAlwaysEnabled(enabled)
+    }
+
+    fun setIslandTransparency(enabled: Boolean) {
+        isIslandTransparency.value = enabled
+        settingsRepository.setIslandTransparencyEnabled(enabled)
+        if (!enabled) setIslandNeuralExpressive(false)
+    }
+
     fun setDebugUiMarginOverlay(enabled: Boolean) {
         isDebugUiMarginOverlay.value = enabled
         settingsRepository.setDebugUiMarginOverlayEnabled(enabled)
@@ -6256,6 +6286,21 @@ class MainViewModel : ViewModel() {
         settingsRepository.setIslandMediaLayeredArtworkEnabled(enabled)
     }
 
+    fun setIslandMediaBubble(enabled: Boolean) {
+        isIslandMediaBubble.value = enabled
+        settingsRepository.setIslandMediaBubbleEnabled(enabled)
+    }
+
+    fun setIslandMediaBubbleWide(enabled: Boolean) {
+        isIslandMediaBubbleWide.value = enabled
+        settingsRepository.setIslandMediaBubbleWideEnabled(enabled)
+    }
+
+    fun setIslandMediaBubbleFillArt(enabled: Boolean) {
+        isIslandMediaBubbleFillArt.value = enabled
+        settingsRepository.setIslandMediaBubbleFillArtEnabled(enabled)
+    }
+
     fun setIslandMediaShowLike(enabled: Boolean) {
         isIslandMediaShowLike.value = enabled
         settingsRepository.setIslandMediaShowLikeEnabled(enabled)
@@ -6392,6 +6437,11 @@ class MainViewModel : ViewModel() {
     fun setIslandShowGlow(enabled: Boolean) {
         isIslandShowGlow.value = enabled
         settingsRepository.setIslandShowGlowEnabled(enabled)
+    }
+
+    fun setIslandGlowIntensity(value: Float) {
+        islandGlowIntensity.floatValue = value
+        settingsRepository.setIslandGlowIntensity(value)
     }
 
     fun setIslandNotifThemedBubble(enabled: Boolean) {

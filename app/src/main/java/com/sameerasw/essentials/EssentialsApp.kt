@@ -41,11 +41,7 @@ class EssentialsApp : Application() {
     private val securityReceiver = SecurityReceiver()
     private val powerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            // Power connected/disconnected are protected actions: only the system may send them, even to our own
-            // receiver, so ask the widget to refresh with its own update action instead
-            context.sendBroadcast(
-                Intent(context, BatteriesWidgetReceiver::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE),
-            )
+            context.sendBroadcast(Intent(context, BatteriesWidgetReceiver::class.java).setAction(BatteriesWidgetReceiver.ACTION_POWER_STATE_CHANGED))
         }
     }
 

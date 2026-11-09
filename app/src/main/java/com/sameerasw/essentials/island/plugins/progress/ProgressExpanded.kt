@@ -1,5 +1,6 @@
 package com.sameerasw.essentials.island.plugins.progress
 
+import com.sameerasw.essentials.island.ui.IslandSurfaceAccent
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -51,6 +52,7 @@ fun ProgressExpanded(
     onOpen: () -> Unit,
     scope: IslandExpandedScope,
 ) {
+    IslandSurfaceAccent(accent)
     val spec = scope.spec
     val sidePadding = spec.expandedPadding + spec.expandedCorner * 0.35f
     Box(propagateMinConstraints = true) {

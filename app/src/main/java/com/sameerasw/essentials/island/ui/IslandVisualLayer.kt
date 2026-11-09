@@ -2,6 +2,7 @@ package com.sameerasw.essentials.island.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -10,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntSize
 
 /** Window-local geometry, independent of the content layer's entrance/exit transform. */
@@ -55,4 +57,13 @@ internal fun visualExpansionAmount(live: IntSize, compact: IntSize, expanded: In
         widthRange > 0 -> (live.width - compact.width).toFloat() / widthRange
         else -> 0f
     }.coerceIn(0f, 1f)
+}
+
+val LocalIslandSurfaceAccent = staticCompositionLocalOf<(Color) -> Unit> { {} }
+
+/** Lets an expanded card report its accent; a no-op unless a host provides a sink. */
+@Composable
+fun IslandSurfaceAccent(color: Color) {
+    val report = LocalIslandSurfaceAccent.current
+    SideEffect { report(color) }
 }

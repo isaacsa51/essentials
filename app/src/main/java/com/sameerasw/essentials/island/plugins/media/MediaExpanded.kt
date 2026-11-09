@@ -1,5 +1,6 @@
 package com.sameerasw.essentials.island.plugins.media
 
+import com.sameerasw.essentials.island.ui.IslandSurfaceAccent
 import com.sameerasw.essentials.island.ui.components.LocalIslandIconColor
 import androidx.compose.foundation.layout.fillMaxSize
 import com.sameerasw.essentials.island.ui.SurfaceBackdrop

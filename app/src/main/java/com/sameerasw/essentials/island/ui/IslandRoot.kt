@@ -4,6 +4,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +93,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import android.graphics.BlurMaskFilter
@@ -128,6 +129,12 @@ import com.sameerasw.essentials.island.service.islandDrawViewport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.sign
+import kotlinx.coroutines.coroutineScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import kotlin.math.roundToInt
 
 interface IslandActions {
@@ -169,6 +176,8 @@ private fun readableOnDark(color: Color): Color {
     return result
 }
 
+
+private const val SURFACE_PULSE_DURATION_MS = 1450
 @Composable
 fun IslandRoot(
     state: IslandUiState,
@@ -180,22 +189,15 @@ fun IslandRoot(
     cameraGeometry: CameraGeometry? = null,
 ) {
     val primary = MaterialTheme.colorScheme.primary
-    val focused = state.items[state.focusedKey]
-    val dynamicAccent = focused?.accent
-        ?: state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.accent }
     val iconBase = if (targetSpec.iconMaterialYou) primary else Color.White
-    val iconTarget = if (targetSpec.iconDynamic) {
-        dynamicAccent ?: iconBase
-    } else {
-        targetSpec.iconColorCustom ?: iconBase
-    }
-    val iconColor by animateColorAsState(readableOnDark(iconTarget), label = "islandIconColor")
-    CompositionLocalProvider(
-        LocalIslandIconColor provides iconColor,
-        LocalIslandTextColor provides if (targetSpec.themedText) pastelOf(iconColor) else null,
-    ) {
-        IslandRootContent(state, targetSpec, actions, onTargetBoundsChanged, registerCollapseAnimator, showCameraRing, cameraGeometry)
-    }
+    fun iconFor(accent: Color?): Color =
+        readableOnDark(if (targetSpec.iconDynamic) accent ?: iconBase else targetSpec.iconColorCustom ?: iconBase)
+    val compactAccent = state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.accent }
+    IslandRootContent(
+        state, targetSpec, actions, onTargetBoundsChanged, registerCollapseAnimator, showCameraRing, cameraGeometry,
+        iconTarget = iconFor(state.items[state.focusedKey]?.accent ?: compactAccent),
+        collapsedIconTarget = iconFor(compactAccent),
+    )
 }
 
 @Composable
@@ -207,6 +209,8 @@ private fun IslandRootContent(
     registerCollapseAnimator: (((() -> Unit) -> Unit)?) -> Unit = {},
     showCameraRing: Boolean = false,
     cameraGeometry: CameraGeometry? = null,
+    iconTarget: Color = Color.White,
+    collapsedIconTarget: Color = iconTarget,
 ) {
     val view = LocalView.current
     val density = LocalDensity.current
@@ -267,6 +271,16 @@ private fun IslandRootContent(
     }
 
     val collapse = remember { Animatable(0f) }
+    val collapsingStage = stage == IslandStage.Expanded || stage == IslandStage.Line
+    val collapseMix = if (collapsingStage) collapse.value.coerceIn(0f, 1f) else 0f
+    val justCollapsed = !collapsingStage && collapse.value >= 0.5f
+
+    val iconAnim = remember { androidx.compose.animation.Animatable(iconTarget) }
+    LaunchedEffect(iconTarget) {
+        if (justCollapsed) iconAnim.snapTo(iconTarget) else iconAnim.animateTo(iconTarget)
+    }
+    val iconColor = if (justCollapsed) iconTarget else lerp(iconAnim.value, collapsedIconTarget, collapseMix)
+
     val outlineHidden = spec.outlineHiddenWhenExpanded && stage == IslandStage.Expanded
     val outlineStageAlpha by animateFloatAsState(
         targetValue = if (outlineHidden) 0f else 1f,
@@ -285,22 +299,34 @@ private fun IslandRootContent(
     val pulseBlur = remember(spec.pulseBlur, density) {
         with(density) { spec.pulseBlur.toPx() }.takeIf { it > 0f }?.let { BlurMaskFilter(it * 0.866f, BlurMaskFilter.Blur.NORMAL) }
     }
+    val compactOutline = state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.let { it.outlineAccent ?: it.accent } }
     val dynamicOutline: Color? = if (spec.outlineDynamic) {
         val focused = state.items[state.focusedKey]
-        (focused?.outlineAccent ?: focused?.accent)
-            ?: state.arrangement.visibleItems.firstNotNullOfOrNull { key -> state.items[key]?.let { it.outlineAccent ?: it.accent } }
+        (focused?.outlineAccent ?: focused?.accent) ?: compactOutline
     } else {
         null
     }
     val animatedOutlineColor: Color? = spec.outlineColor?.let { base ->
-        animateColorAsState(dynamicOutline ?: base, label = "islandOutlineColor").value
+        val target = dynamicOutline ?: base
+        val collapsedTarget = (if (spec.outlineDynamic) compactOutline else null) ?: base
+        val outlineAnim = remember { androidx.compose.animation.Animatable(target) }
+        LaunchedEffect(target) {
+            if (justCollapsed) outlineAnim.snapTo(target) else outlineAnim.animateTo(target)
+        }
+        if (justCollapsed) target else lerp(outlineAnim.value, collapsedTarget, collapseMix)
     }
     fun outlineFor(fade: Float): Color? = animatedOutlineColor
         ?.takeIf { outlineAlpha > 0f && fade > 0f }
         ?.let { it.copy(alpha = it.alpha * outlineAlpha * fade) }
     val pulse = remember { Animatable(0f) }
+    val surfacePulse = remember { Animatable(0f) }
+    var quietContentChange by remember { mutableStateOf(false) }
     LaunchedEffect(state.focusedKey, state.items[state.focusedKey]?.contentId, spec.pulseShadow) {
         pulse.snapTo(0f)
+        if (quietContentChange) {
+            quietContentChange = false
+            return@LaunchedEffect
+        }
         if (!spec.pulseShadow || state.focusedKey == null) return@LaunchedEffect
         pulse.animateTo(1f, surfaceMotion.tween(250, easing = LinearEasing))
         pulse.animateTo(0f, surfaceMotion.tween((spec.pulseDurationMs - 250).coerceAtLeast(100), easing = LinearEasing))
@@ -417,6 +443,14 @@ private fun IslandRootContent(
     val holdSize = remember { IntArray(2) }
     val previewCompactSize = remember { IntArray(2) }
     val dismissOffset = remember { Animatable(0f) }
+    val dropOffset = remember { Animatable(0f) }
+    val carouselSnapshot = rememberGraphicsLayer()
+    val carouselProgress = remember { Animatable(0f) }
+    var carouselDrag by remember { mutableStateOf(false) }
+    var carouselActive by remember { mutableStateOf(false) }
+    var carouselReady by remember { mutableStateOf(false) }
+    var carouselDir by remember { mutableFloatStateOf(0f) }
+    var carouselStart by remember { mutableFloatStateOf(0f) }
     var target by remember { mutableStateOf(IntSize.Zero) }
     var compactSize by remember { mutableStateOf(IntSize.Zero) }
     var windowWidth by remember { mutableStateOf(0) }
@@ -426,7 +460,7 @@ private fun IslandRootContent(
     var dismissCommitted by remember { mutableStateOf(false) }
     val showPreview by remember { derivedStateOf { collapse.value > 0f } }
     var swipeIntent by remember { mutableStateOf<SwipeIntent?>(null) }
-    val showDismissReveal by remember { derivedStateOf { dismissOffset.value != 0f } }
+    val showDismissReveal by remember { derivedStateOf { dismissOffset.value != 0f && !carouselDrag && !carouselActive } }
     val revealDirection by remember { derivedStateOf { if (dismissOffset.value >= 0f) 1f else -1f } }
     val dismissThresholdPx = with(density) { 48.dp.toPx() }
     val jelly = rememberCompactJellyState()
@@ -775,7 +809,12 @@ private fun IslandRootContent(
             spec.growDirection > 0 -> surfaceLeft(width) + width - sideWidthLive()
             else -> surfaceLeft(width)
         }
-        return (startX + (endX - startX) * catchUpAnim.value).roundToInt()
+        val x = (startX + (endX - startX) * catchUpAnim.value.coerceIn(0f, 1f)).roundToInt()
+        return if (spec.growDirection > 0) {
+            maxOf(x, windowWidth / 2 - bubbleSizePx / 2)
+        } else {
+            minOf(x, windowWidth / 2 + bubbleSizePx / 2 - sideWidthLive())
+        }
     }
 
     fun endBubbleX(width: Int): Int = surfaceLeft(width) + width + bubbleGapPx
@@ -980,6 +1019,8 @@ private fun IslandRootContent(
     CompositionLocalProvider(
         LocalLiquidField provides liquidField,
         LocalIslandSurfaceMotion provides surfaceMotion,
+        LocalIslandIconColor provides iconColor,
+        LocalIslandTextColor provides if (targetSpec.themedText) pastelOf(iconColor) else null,
     ) {
     Box(
         Modifier
@@ -1580,6 +1621,26 @@ private fun IslandRootContent(
                     var dy = 0f
                     
                     var sliding = false
+                    var dropping = false
+                    var axisLocked = false
+                    var lockedHorizontal = false
+                    val downMode = spec.dismissDown && !peek
+                    var switchMode = downMode
+                    suspend fun awaitNextContent(focused: IslandItem) {
+                        quietContentChange = true
+                        val changed = withTimeoutOrNull(600L) {
+                            snapshotFlow { currentState.focused }.first {
+                                it !== focused && (focused.contentId == null || it?.contentId != focused.contentId)
+                            }
+                        }
+                        if (changed == null) quietContentChange = false
+                    }
+                    fun switchTarget(dir: Float): (() -> Unit)? {
+                        val focused = currentState.focused ?: return null
+                        val index = focused.stack.indexOfFirst { it.current }
+                        if (index >= 0) return focused.stack.getOrNull(if (dir < 0f) index + 1 else index - 1)?.onSelect
+                        return if (dir < 0f) focused.queue?.let { { actions.onAdvance() } } else null
+                    }
                     var crossed = false
                     var progress = 0f
                     var collapseBase = 0f
@@ -1608,6 +1669,10 @@ private fun IslandRootContent(
                             dismissBase = dismissOffset.value
                             scope.launch { collapse.stop() }
                             scope.launch { dismissOffset.stop() }
+                            scope.launch { dropOffset.stop() }
+                            dropping = false
+                            axisLocked = false
+                            switchMode = downMode || (!peek && currentState.focused?.dismissible != true)
                             lastStep = 0f
                             crossed = false
                             sliding = false
@@ -1618,25 +1683,46 @@ private fun IslandRootContent(
                             dx += amount.x
                             dy += amount.y
                             val inward = dx * inwardSign()
-                            val horizontal = abs(dx) >= abs(dy)
+                            if (!axisLocked) {
+                                axisLocked = true
+                                lockedHorizontal = abs(dx) >= abs(dy)
+                            }
+                            val horizontal = lockedHorizontal
                             val dismissible = currentState.focused?.dismissible == true
+                            val canSwitch = dx != 0f && switchTarget(dx) != null
                             sliding = if (peek) horizontal && inward <= 0f else horizontal
-                            val slide = dismissBase + if (dismissible) dx else dx * 0.25f
+                            carouselDrag = sliding && switchMode && !carouselActive
+                            dropping = downMode && !horizontal && dy > 0f
+                            val slideFree = if (switchMode) canSwitch else dismissible
+                            val slide = dismissBase + if (slideFree) dx else dx * 0.25f
+                            val drop = if (dismissible) dy else dy * 0.25f
                             if (sliding) {
                                 progress = 0f
                                 if (collapse.targetValue != 0f) scope.launch { collapse.animateTo(0f, surfaceMotion.release()) }
+                                if (dropOffset.targetValue != 0f) scope.launch { dropOffset.animateTo(0f, surfaceMotion.fling()) }
                                 scope.launch { dismissOffset.snapTo(slide) }
+                            } else if (dropping) {
+                                progress = 0f
+                                if (collapse.targetValue != 0f) scope.launch { collapse.animateTo(0f, IslandMotion.release()) }
+                                if (dismissOffset.targetValue != 0f) scope.launch { dismissOffset.animateTo(0f, IslandMotion.fling()) }
+                                scope.launch { dropOffset.snapTo(drop) }
                             } else {
                                 val pull = if (peek) maxOf(inward, -dy) else -dy
                                 progress = (collapseBase + pull / collapseRange).coerceIn(0f, 1f)
                                 scope.launch { collapse.snapTo(progress) }
                                 if (dismissOffset.targetValue != 0f) scope.launch { dismissOffset.animateTo(0f, surfaceMotion.fling()) }
+                                if (dropOffset.targetValue != 0f) scope.launch { dropOffset.animateTo(0f, surfaceMotion.fling()) }
                             }
-                            val now = if (sliding) abs(slide) > dismissThreshold && dismissible else progress > COLLAPSE_COMMIT
+                            val now = when {
+                                sliding -> abs(slide) > dismissThreshold && slideFree
+                                dropping -> drop > dismissThreshold && dismissible
+                                else -> progress > COLLAPSE_COMMIT
+                            }
                             swipeIntent = when {
                                 !now -> null
-                                !sliding -> SwipeIntent.Hide
-                                else -> SwipeIntent.Dismiss
+                                sliding && switchMode -> null
+                                sliding || dropping -> SwipeIntent.Dismiss
+                                else -> SwipeIntent.Hide
                             }
                             if (now != crossed) {
                                 crossed = now
@@ -1652,7 +1738,75 @@ private fun IslandRootContent(
                         onDragEnd = {
                             swipeIntent = null
                             val v = tracker.calculateVelocity()
-                            if (sliding) {
+                            if (sliding && switchMode) {
+                                val focused = currentState.focused
+                                val flung = abs(v.x) > 1000f && sign(v.x) == sign(dismissOffset.value)
+                                val dir = if (dismissOffset.value > 0f) 1f else -1f
+                                val target = switchTarget(dir)
+                                val commit = target != null && focused != null && (crossed || flung)
+                                val width = size.width.toFloat().coerceAtLeast(1f)
+                                scope.launch {
+                                    if (!commit || focused == null || target == null) {
+                                        dismissOffset.animateTo(0f, IslandMotion.fling(), initialVelocity = v.x)
+                                        carouselDrag = false
+                                        return@launch
+                                    }
+                                    IslandHaptics.commit(context)
+                                    carouselStart = dismissOffset.value
+                                    carouselDir = dir
+                                    carouselReady = false
+                                    carouselProgress.snapTo(0f)
+                                    carouselActive = true
+                                    carouselDrag = false
+                                    dismissOffset.snapTo(0f)
+                                    target()
+                                    actions.onInteraction()
+                                    try {
+                                        coroutineScope {
+                                            launch {
+                                                awaitNextContent(focused)
+                                                carouselReady = true
+                                            }
+                                            val remaining = abs(dir * width - carouselStart).coerceAtLeast(1f)
+                                            carouselProgress.animateTo(
+                                                1f,
+                                                spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow),
+                                                initialVelocity = (abs(v.x) / remaining).coerceAtMost(6f),
+                                            )
+                                        }
+                                    } finally {
+                                        carouselActive = false
+                                        carouselReady = false
+                                        carouselProgress.snapTo(0f)
+                                    }
+                                }
+                            } else if (dropping) {
+                                val focused = currentState.focused
+                                val flung = v.y > 1500f
+                                val commit = focused?.dismissible == true && (crossed || flung)
+                                scope.launch {
+                                    if (!commit || focused == null) {
+                                        dropOffset.animateTo(0f, IslandMotion.fling(), initialVelocity = v.y)
+                                        return@launch
+                                    }
+                                    IslandHaptics.commit(context)
+                                    val target = size.height.toFloat()
+                                    val remaining = abs(target - dropOffset.value)
+                                    val speed = maxOf(v.y, 2500f)
+                                    val throwMs = (remaining / speed * 1000f).toInt().coerceIn(90, 200)
+                                    dropOffset.animateTo(target, tween(throwMs, easing = LinearEasing))
+                                    if (focused.queue != null) {
+                                        actions.onDismiss()
+                                        awaitNextContent(focused)
+                                        dropOffset.snapTo(target * 0.3f)
+                                        dropOffset.animateTo(0f, IslandMotion.fling())
+                                    } else {
+                                        dismissCommitted = true
+                                        actions.onDismiss()
+                                        dropOffset.snapTo(0f)
+                                    }
+                                }
+                            } else if (sliding) {
                                 val focused = currentState.focused
                                 val flung = abs(v.x) > 1500f
                                 val dir = if ((if (flung) v.x else dismissOffset.value) > 0f) 1f else -1f
@@ -1670,7 +1824,7 @@ private fun IslandRootContent(
                                     dismissOffset.animateTo(dir * flyOff, throwSpec)
                                     if (focused.queue != null) {
                                         actions.onDismiss()
-                                        withTimeoutOrNull(250L) { snapshotFlow { currentState.focused }.first { it !== focused } }
+                                        awaitNextContent(focused)
                                     } else {
                                         dismissCommitted = true
                                         actions.onDismiss()
@@ -1695,7 +1849,11 @@ private fun IslandRootContent(
                         onDragCancel = {
                             swipeIntent = null
                             scope.launch { collapse.animateTo(0f, surfaceMotion.release()) }
-                            scope.launch { dismissOffset.animateTo(0f, surfaceMotion.fling()) }
+                            scope.launch {
+                                dismissOffset.animateTo(0f, surfaceMotion.fling())
+                                carouselDrag = false
+                            }
+                            scope.launch { dropOffset.animateTo(0f, surfaceMotion.fling()) }
                         },
                     )
                 },
@@ -1714,7 +1872,7 @@ private fun IslandRootContent(
                 else -> Alignment.TopCenter
             }
             val queuedNext = item?.queue?.next
-            if (showDismissReveal && queuedNext != null) {
+            if (showDismissReveal && queuedNext != null && !spec.dismissDown && item?.dismissible == true) {
                 Box(
                     Modifier
                         .matchParentSize()
@@ -1730,7 +1888,7 @@ private fun IslandRootContent(
                 ) {
                     StageContent(key.stage, queuedNext, state, spec, actions, interactive = false)
                 }
-            } else if (showDismissReveal && item?.dismissible == true) {
+            } else if (showDismissReveal && item?.dismissible == true && !spec.dismissDown) {
                 DismissReveal(
                     fromStart = revealDirection > 0f,
                     progress = { (abs(dismissOffset.value) / dismissThresholdPx).coerceIn(0f, 1f) },
@@ -1781,20 +1939,34 @@ private fun IslandRootContent(
                         .graphicsLayer {
                             alpha = (if (pending) 0f else contentAlpha.value) * growGate(0.3f, 0.5f) *
                                 (if (previewing) 1f - collapse.value * 1.6f else 1f).coerceIn(0f, 1f) *
-                                if (surfaceSize.width > 0) (1f - abs(dismissOffset.value) / surfaceSize.width * 0.6f).coerceIn(0f, 1f) else 1f
-                            translationX = dismissOffset.value + wiggle.value
+                                (if (carouselDrag || carouselActive || surfaceSize.width <= 0) 1f else (1f - abs(dismissOffset.value) / surfaceSize.width * 0.6f).coerceIn(0f, 1f)) *
+                                (if (surfaceSize.height > 0) (1f - dropOffset.value / surfaceSize.height).coerceIn(0f, 1f) else 1f)
+                            translationX = if (carouselActive) {
+                                carouselStart + (carouselDir * size.width - carouselStart) * carouselProgress.value - carouselDir * size.width
+                            } else {
+                                dismissOffset.value + wiggle.value
+                            }
                             val m = contentMotion.value - if (previewing) collapse.value.coerceIn(0f, 1f) else 0f
                             // Only shrink (growing entry, drag preview); rising in from below keeps its size.
                             val scale = 1f + contentScaleFor(key.stage, spec.bondEdge) * m.coerceAtMost(0f)
                             scaleX = scale
                             scaleY = scale
-                            translationY = contentShiftPx * m + edgeCorrection(key.stage)
+                            translationY = contentShiftPx * m + edgeCorrection(key.stage) + dropOffset.value
                             transformOrigin = TransformOrigin(contentOriginX, 0f)
-                            val sliding = dismissOffset.value != 0f
+                            val sliding = !carouselActive && !carouselDrag && (dismissOffset.value != 0f || dropOffset.value != 0f)
                             shape = RoundedCornerShape(if (sliding) cardCorner.toPx() else 0f)
                             clip = sliding
                         }
-                        .drawBehind { if (dismissOffset.value != 0f && backdrop == null) drawRect(Color.Black) }
+                        .drawBehind { if (dismissOffset.value != 0f && backdrop == null && !layeredSurface) drawRect(Color.Black) }
+                        .drawWithContent {
+                            if (carouselActive) {
+                                translate(left = carouselDir * size.width) { drawLayer(carouselSnapshot) }
+                                if (carouselReady) drawContent()
+                            } else {
+                                if (carouselDrag) carouselSnapshot.record { this@drawWithContent.drawContent() }
+                                drawContent()
+                            }
+                        }
                 } else {
                     Modifier
                         .layout { measurable, _ ->
@@ -1818,6 +1990,7 @@ private fun IslandRootContent(
                         }
                 }
                 val layerItem = if (current) item else layerKey.itemKey?.let { state.items[it] ?: lastItems[it] }
+                val layerLayered = layerItem?.expandedSurfaceStyle == ExpandedSurfaceStyle.Layered
                 Box(layerModifier) {
                     CompositionLocalProvider(
                         LocalIslandBackdropSlot provides backdropSlot.takeIf { current },

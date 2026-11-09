@@ -24,4 +24,5 @@ class MediaSnapshot(
 
 object IslandMediaState {
     val current = kotlinx.coroutines.flow.MutableStateFlow<MediaSnapshot?>(null)
+    val live = kotlinx.coroutines.flow.MutableStateFlow(false)
 }

@@ -964,6 +964,8 @@ object FeatureRegistry {
                         ),
                     ),
                 parentFeatureId = "Display",
+                contributors = listOf("Slayemus"),
+                creditsLabel = R.string.label_feature_designed_by,
             ) {
                 override fun isEnabled(viewModel: MainViewModel) = viewModel.isIslandEnabled.value
 
@@ -2318,6 +2320,7 @@ object FeatureRegistry {
                 category = R.string.cat_system,
                 description = R.string.feat_shut_up_desc,
                 aboutDescription = R.string.shut_up_description,
+                howToUse = R.string.shut_up_how_to_use,
                 permissionKeys = listOf("WRITE_SECURE_SETTINGS", "USAGE_STATS"),
                 showToggle = false,
                 hasMoreSettings = true,
