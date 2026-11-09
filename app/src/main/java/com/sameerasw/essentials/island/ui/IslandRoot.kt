@@ -753,6 +753,7 @@ private fun IslandRootContent(
     val cellUnitPx = with(density) { (spec.cellSize + spec.cellSpacing).toPx() }
     LaunchedEffect(endShown, endWidthPx.intValue) {
         val w = endWidthPx.intValue
+        com.sameerasw.essentials.island.state.CompactCellWidths.endBubblePx = if (endShown) w else 0
         if (endShown && w > 0) actions.onBubbleMeasured((w / cellUnitPx).roundToInt().coerceAtLeast(1))
     }
     // Bonded to the edge, the bubble closes the gap and slightly overlaps, so the liquid neck merges both into one body

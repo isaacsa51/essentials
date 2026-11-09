@@ -890,7 +890,7 @@ class IslandCoordinator(
         return (((px + (geometry?.gap ?: 0f)) / unit) * 4f).roundToInt() / 4f
     }
 
-    private fun fitsCompactWidth(before: List<String>, after: List<String>, leftExtra: Int, growLeft: Boolean, growRight: Boolean): Int? {
+    private fun fitsCompactWidth(before: List<String>, after: List<String>, leftExtra: Int, rightExtra: Int, growLeft: Boolean, growRight: Boolean): Int? {
         val geo = geometry ?: return 0
         val density = service.resources.displayMetrics.density
         val cell = geo.diameter.toInt()
@@ -908,6 +908,12 @@ class IslandCoordinator(
         val needLeft = need(before, leftExtra)
         val needRight = need(after, 0)
         if (needLeft > left || needRight > right) return null
+        // A bubble right of the island sits outside the pill: the pill keeps its max width, but pill and bubble must stay on screen
+        if (rightExtra > 0) {
+            val bubble = maxOf(CompactCellWidths.endBubblePx, geo.compactHeight.toInt() + (rightExtra - 1) * (cell + spacing))
+            val screenRight = geo.screenWidth - (geo.centerX + geo.cameraSlotWidth / 2f) - SCREEN_MARGIN_DP * density
+            if (needRight + spacing + bubble > screenRight) return null
+        }
         val mirrored = geo.anchor == CameraAnchor.Center && leftExtra == 0
         if (mirrored && maxOf(needLeft, needRight) > minOf(left, right)) return null
         return maxOf(needLeft, needRight)
@@ -1059,6 +1065,9 @@ class IslandCoordinator(
         private const val STATUS_BAR_POLL_MS = 1000L
         private const val STATUS_BAR_MARGIN_DP = 10f
         private const val GROW_SLACK_DP = 12f
+
+        // The island's gap to each screen edge
+        private const val SCREEN_MARGIN_DP = 8f
     }
 }
 

@@ -55,6 +55,16 @@ class CompactLayoutEngineTest {
         assertEquals("flash.icon notif.icon time | battery", (a.before.reversed() + "|" + a.after).joinToString(" "))
     }
 
+    // A right-side bubble keeps battery left in the greedy pass; when that can't fit, battery crosses rather than media dropping
+    @Test fun pinnedCrossesCameraBeforeDynamicIsDropped() {
+        val a = CompactLayoutEngine.arrange(
+            listOf(time, battery, media),
+            fits = { before, _ -> if ("battery" in before) null else 0 },
+        )
+        assertEquals(setOf("time", "battery", "media"), a.visibleItems)
+        assertEquals(true, "battery" in a.after)
+    }
+
     @Test fun mediaAloneSplitsAroundCamera() =
         assertEquals("media.art | media.eq", visual(listOf(media)))
 
