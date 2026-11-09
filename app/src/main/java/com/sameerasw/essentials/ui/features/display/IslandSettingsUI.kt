@@ -950,40 +950,65 @@ fun IslandSettingsUI(
                             },
                             modifier = Modifier.highlight(highlightSetting == "island_media_layered_player"),
                         )
-                        // The artwork blur settings only apply to the original player; the layered one draws its own surface
-                        if (!viewModel.isIslandMediaLayeredPlayer.value) {
+                        val layeredPlayer = viewModel.isIslandMediaLayeredPlayer.value
+                        if (layeredPlayer) {
                             IconToggleItem(
-                                iconRes = R.drawable.rounded_blur_on_24,
-                                title = stringResource(R.string.island_media_blur_background_title),
-                                isChecked = viewModel.isIslandMediaBlurBackground.value,
+                                iconRes = R.drawable.rounded_bubble_chart_24,
+                                title = stringResource(R.string.island_media_layered_particles_title),
+                                description = stringResource(R.string.island_media_layered_particles_desc),
+                                isChecked = viewModel.isIslandMediaLayeredParticles.value,
                                 onCheckedChange = { checked ->
                                     HapticUtil.performVirtualKeyHaptic(view)
-                                    viewModel.setIslandMediaBlurBackground(checked)
+                                    viewModel.setIslandMediaLayeredParticles(checked)
                                 },
-                                modifier = Modifier.highlight(highlightSetting == "island_media_blur_background"),
+                                modifier = Modifier.highlight(highlightSetting == "island_media_layered_particles"),
                             )
-                            if (viewModel.isIslandMediaBlurBackground.value) {
-                                ConfigSliderItem(
-                                    title = stringResource(R.string.island_media_blur_source_title),
-                                    value = viewModel.islandMediaBlurSourceWidth.intValue.toFloat(),
-                                    onValueChange = { viewModel.setIslandMediaBlurSourceWidth(it.roundToInt()) },
-                                    valueRange = ArtworkBlur.SOURCE_WIDTH_RANGE,
-                                    increment = 8f,
-                                    valueFormatter = { "${it.roundToInt()} px" },
-                                    iconRes = R.drawable.rounded_image_24,
-                                    modifier = Modifier.highlight(highlightSetting == "island_media_blur_source"),
-                                )
-                                ConfigSliderItem(
-                                    title = stringResource(R.string.island_media_blur_saturation_title),
-                                    value = viewModel.islandMediaBlurSaturation.floatValue,
-                                    onValueChange = { viewModel.setIslandMediaBlurSaturation(it) },
-                                    valueRange = ArtworkBlur.SATURATION_RANGE,
-                                    increment = 0.05f,
-                                    valueFormatter = { "%.2f×".format(it) },
-                                    iconRes = R.drawable.rounded_palette_24,
-                                    modifier = Modifier.highlight(highlightSetting == "island_media_blur_saturation"),
-                                )
-                            }
+                            IconToggleItem(
+                                iconRes = R.drawable.rounded_blur_linear_24,
+                                title = stringResource(R.string.island_media_layered_translucent_title),
+                                description = stringResource(R.string.island_media_layered_translucent_desc),
+                                isChecked = viewModel.isIslandMediaLayeredTranslucent.value,
+                                onCheckedChange = { checked ->
+                                    HapticUtil.performVirtualKeyHaptic(view)
+                                    viewModel.setIslandMediaLayeredTranslucent(checked)
+                                },
+                                modifier = Modifier.highlight(highlightSetting == "island_media_layered_translucent"),
+                            )
+                        }
+                        // Each player keeps its own artwork background choice; the blur sliders below are shared
+                        val artworkBackground =
+                            if (layeredPlayer) viewModel.isIslandMediaLayeredArtwork.value else viewModel.isIslandMediaBlurBackground.value
+                        IconToggleItem(
+                            iconRes = R.drawable.rounded_blur_on_24,
+                            title = stringResource(R.string.island_media_blur_background_title),
+                            isChecked = artworkBackground,
+                            onCheckedChange = { checked ->
+                                HapticUtil.performVirtualKeyHaptic(view)
+                                if (layeredPlayer) viewModel.setIslandMediaLayeredArtwork(checked) else viewModel.setIslandMediaBlurBackground(checked)
+                            },
+                            modifier = Modifier.highlight(highlightSetting == "island_media_blur_background"),
+                        )
+                        if (artworkBackground) {
+                            ConfigSliderItem(
+                                title = stringResource(R.string.island_media_blur_source_title),
+                                value = viewModel.islandMediaBlurSourceWidth.intValue.toFloat(),
+                                onValueChange = { viewModel.setIslandMediaBlurSourceWidth(it.roundToInt()) },
+                                valueRange = ArtworkBlur.SOURCE_WIDTH_RANGE,
+                                increment = 8f,
+                                valueFormatter = { "${it.roundToInt()} px" },
+                                iconRes = R.drawable.rounded_image_24,
+                                modifier = Modifier.highlight(highlightSetting == "island_media_blur_source"),
+                            )
+                            ConfigSliderItem(
+                                title = stringResource(R.string.island_media_blur_saturation_title),
+                                value = viewModel.islandMediaBlurSaturation.floatValue,
+                                onValueChange = { viewModel.setIslandMediaBlurSaturation(it) },
+                                valueRange = ArtworkBlur.SATURATION_RANGE,
+                                increment = 0.05f,
+                                valueFormatter = { "%.2f×".format(it) },
+                                iconRes = R.drawable.rounded_palette_24,
+                                modifier = Modifier.highlight(highlightSetting == "island_media_blur_saturation"),
+                            )
                         }
                     }
                     Text(

@@ -1073,20 +1073,22 @@ private fun IslandRootContent(
                 )
             }
         }
+        // Space between the card's bottom and the attachment: the gap, plus the queue pill when an expanded item shows both
+        fun attachmentGapAbove(): Int =
+            attachmentGapPx + if (queueShown && currentState.stage == IslandStage.Expanded && pillSize.height > 0) pillSize.height + pillGapPx else 0
         IslandAttachmentSlot(
             attachment = attachment,
             shown = attachmentShown,
             widthPx = with(density) { (spec.expandedWidth + spec.expandedOutset * 2).roundToPx() },
             centerX = { val w = visibleWidth(); surfaceLeft(w) + w / 2f },
-            top = {
-                // Sits under the queue pill when an expanded item shows both
-                val pill = if (queueShown && currentState.stage == IslandStage.Expanded && pillSize.height > 0) pillSize.height + pillGapPx else 0
-                (surfaceTopPx + liveSurfaceHeight.intValue + attachmentGapPx + pill).toFloat()
-            },
+            top = { (surfaceTopPx + liveSurfaceHeight.intValue + attachmentGapAbove()).toFloat() },
             collapse = { collapse.value },
-            outlineColor = outlineFor(1f),
+            // The layered surface drops the card outline, so its attachment does too
+            outlineColor = outlineFor(1f)?.takeUnless { focusedItem?.expandedSurfaceStyle == ExpandedSurfaceStyle.Layered },
             outlineThickness = spec.outlineThickness,
             onSizeChanged = { attachmentSize = it },
+            // Soft light in the item's colour, falling from the top of the attachment
+            glow = focusedItem?.accent ?: LocalIslandIconColor.current,
         )
         if (bond > 0.001f && lastCatchUp != null && catchUpAnim.value > 0.5f && !bubbleOnlyLayout) {
             Box(

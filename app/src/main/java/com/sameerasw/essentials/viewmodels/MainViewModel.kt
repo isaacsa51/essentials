@@ -296,6 +296,9 @@ class MainViewModel : ViewModel() {
     val islandMediaBlurSourceWidth = mutableIntStateOf(96)
     val islandMediaBlurSaturation = mutableFloatStateOf(1.35f)
     val isIslandMediaLayeredPlayer = mutableStateOf(false)
+    val isIslandMediaLayeredParticles = mutableStateOf(true)
+    val isIslandMediaLayeredTranslucent = mutableStateOf(true)
+    val isIslandMediaLayeredArtwork = mutableStateOf(false)
     val islandMediaPlayerStyle = mutableStateOf("default")
     val isIslandMediaShowLike = mutableStateOf(true)
     val islandNotifPeekStyle = mutableStateOf(SettingsRepository.ISLAND_NOTIF_PEEK_STYLE_FULL)
@@ -1000,6 +1003,15 @@ class MainViewModel : ViewModel() {
 
                     SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER ->
                         isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
+
+                    SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PARTICLES ->
+                        isIslandMediaLayeredParticles.value = settingsRepository.isIslandMediaLayeredParticlesEnabled()
+
+                    SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT ->
+                        isIslandMediaLayeredTranslucent.value = settingsRepository.isIslandMediaLayeredTranslucentEnabled()
+
+                    SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_ARTWORK ->
+                        isIslandMediaLayeredArtwork.value = settingsRepository.isIslandMediaLayeredArtworkEnabled()
 
                     SettingsRepository.KEY_ISLAND_MEDIA_PLAYER_STYLE ->
                         islandMediaPlayerStyle.value = settingsRepository.getIslandMediaPlayerStyle()
@@ -2632,6 +2644,9 @@ class MainViewModel : ViewModel() {
         islandMediaBlurSourceWidth.intValue = settingsRepository.getIslandMediaBlurSourceWidth()
         islandMediaBlurSaturation.floatValue = settingsRepository.getIslandMediaBlurSaturation()
         isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
+        isIslandMediaLayeredParticles.value = settingsRepository.isIslandMediaLayeredParticlesEnabled()
+        isIslandMediaLayeredTranslucent.value = settingsRepository.isIslandMediaLayeredTranslucentEnabled()
+        isIslandMediaLayeredArtwork.value = settingsRepository.isIslandMediaLayeredArtworkEnabled()
         islandMediaPlayerStyle.value = settingsRepository.getIslandMediaPlayerStyle()
         isIslandMediaShowLike.value = settingsRepository.isIslandMediaShowLikeEnabled()
         islandNotifPeekStyle.value = settingsRepository.getIslandNotifPeekStyle()
@@ -6224,6 +6239,21 @@ class MainViewModel : ViewModel() {
     fun setIslandMediaLayeredPlayer(enabled: Boolean) {
         isIslandMediaLayeredPlayer.value = enabled
         settingsRepository.setIslandMediaLayeredPlayerEnabled(enabled)
+    }
+
+    fun setIslandMediaLayeredParticles(enabled: Boolean) {
+        isIslandMediaLayeredParticles.value = enabled
+        settingsRepository.setIslandMediaLayeredParticlesEnabled(enabled)
+    }
+
+    fun setIslandMediaLayeredTranslucent(enabled: Boolean) {
+        isIslandMediaLayeredTranslucent.value = enabled
+        settingsRepository.setIslandMediaLayeredTranslucentEnabled(enabled)
+    }
+
+    fun setIslandMediaLayeredArtwork(enabled: Boolean) {
+        isIslandMediaLayeredArtwork.value = enabled
+        settingsRepository.setIslandMediaLayeredArtworkEnabled(enabled)
     }
 
     fun setIslandMediaShowLike(enabled: Boolean) {

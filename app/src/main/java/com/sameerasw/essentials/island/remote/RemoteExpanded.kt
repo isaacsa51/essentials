@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -106,6 +107,9 @@ internal fun RemoteSurfaceBox(
     showLive: Boolean,
     snapshot: ImageBitmap?,
     modifier: Modifier = Modifier,
+    // Above the host window instead of behind it: no hole is punched, so what the host paints under the surface
+    // (an attachment's black or translucent body) shows through the provider's transparent pixels
+    aboveHost: Boolean = false,
 ) {
     val fade by animateFloatAsState(if (showLive) 1f else 0f, if (showLive) motionTween(160) else snap(), label = "remoteFade")
     val current = remember { intArrayOf(0, 0) }
@@ -116,14 +120,15 @@ internal fun RemoteSurfaceBox(
             bitmap = it,
             contentDescription = null,
             contentScale = ContentScale.FillBounds,
-            modifier = Modifier.matchParentSize(),
+            // An on-top surface may be transparent, so the snapshot under it would show its stale content through
+            modifier = Modifier.matchParentSize().graphicsLayer { alpha = if (aboveHost) 1f - fade else 1f },
         )
     }
     AndroidView(
         modifier = Modifier.matchParentSize(),
         factory = { context ->
             SurfaceView(context).apply {
-                setZOrderMediaOverlay(true)
+                if (aboveHost) setZOrderOnTop(true) else setZOrderMediaOverlay(true)
                 holder.setFormat(PixelFormat.TRANSLUCENT)
                 outlineProvider = object : ViewOutlineProvider() {
                     override fun getOutline(view: View, outline: Outline) {

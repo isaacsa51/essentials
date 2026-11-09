@@ -735,6 +735,9 @@ class SettingsRepository(
         const val KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH = "island_media_blur_source_width"
         const val KEY_ISLAND_MEDIA_BLUR_SATURATION = "island_media_blur_saturation"
         const val KEY_ISLAND_MEDIA_LAYERED_PLAYER = "island_media_layered_player"
+        const val KEY_ISLAND_MEDIA_LAYERED_PARTICLES = "island_media_layered_particles"
+        const val KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT = "island_media_layered_translucent"
+        const val KEY_ISLAND_MEDIA_LAYERED_ARTWORK = "island_media_layered_artwork"
         const val KEY_ISLAND_MEDIA_PLAYER_STYLE = "island_media_player_style"
         const val KEY_ISLAND_MEDIA_SHOW_LIKE = "island_media_show_like"
         const val KEY_ISLAND_NOTIF_CONDENSED_INFO = "island_notif_condensed_info"
@@ -4585,6 +4588,18 @@ class SettingsRepository(
     fun isIslandMediaLayeredPlayerEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_PLAYER, false)
 
     fun setIslandMediaLayeredPlayerEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_PLAYER, enabled)
+
+    fun isIslandMediaLayeredParticlesEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_PARTICLES, true)
+
+    fun setIslandMediaLayeredParticlesEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_PARTICLES, enabled)
+
+    fun isIslandMediaLayeredTranslucentEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT, true)
+
+    fun setIslandMediaLayeredTranslucentEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT, enabled)
+
+    fun isIslandMediaLayeredArtworkEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_ARTWORK, false)
+
+    fun setIslandMediaLayeredArtworkEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_ARTWORK, enabled)
 
     fun getIslandMediaPlayerStyle(): String = getString(KEY_ISLAND_MEDIA_PLAYER_STYLE, null) ?: "default"
 

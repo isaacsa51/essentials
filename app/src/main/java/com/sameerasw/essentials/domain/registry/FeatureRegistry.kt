@@ -933,6 +933,16 @@ object FeatureRegistry {
                             "island_media_layered_player",
                         ),
                         SearchSetting(
+                            R.string.island_media_layered_particles_title,
+                            R.string.island_media_layered_particles_desc,
+                            "island_media_layered_particles",
+                        ),
+                        SearchSetting(
+                            R.string.island_media_layered_translucent_title,
+                            R.string.island_media_layered_translucent_desc,
+                            "island_media_layered_translucent",
+                        ),
+                        SearchSetting(
                             R.string.island_media_blur_background_title,
                             R.string.duo_show_media_title,
                             "island_media_blur_background",
