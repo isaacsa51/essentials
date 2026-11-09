@@ -186,9 +186,10 @@ private fun mediaSurfacePaint(gradient: MediaSurfaceGradient) = Paint(Paint.ANTI
  * lyrics attachment: the same black radial transparency gradient, opaque at the top centre and reaching its
  * half-transparent edge stop at this element's sides and bottom.
  */
-fun Modifier.translucentMediaSurface(): Modifier = drawBehind {
-    if (size.width <= 0f || size.height <= 0f) return@drawBehind
+fun Modifier.translucentMediaSurface(): Modifier = drawWithCache {
+    if (size.width <= 0f || size.height <= 0f) return@drawWithCache onDrawBehind {}
     val stops = floatArrayOf(0.05f, 0.25f, 0.45f, 0.65f, 0.85f, 1f)
+    // Built once per size, so an animating sibling does not allocate a shader every frame
     val paint = mediaSurfacePaint(MediaSurfaceGradient(Offset(size.width / 2f, 0f), size.width / 2f, size.height, stops))
-    drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
+    onDrawBehind { drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
 }

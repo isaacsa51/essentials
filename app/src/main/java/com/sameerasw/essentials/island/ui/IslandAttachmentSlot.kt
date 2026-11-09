@@ -24,17 +24,16 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.dp
 import com.sameerasw.essentials.island.model.IslandAttachment
 import com.sameerasw.island.media.ui.translucentMediaSurface
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.lerp
@@ -89,14 +88,17 @@ fun IslandAttachmentSlot(
     }
     val shape = RoundedCornerShape(corner)
     val glowColor = glow?.let { animateColorAsState(it, label = "attachmentGlow").value }
-    // Slow loop the light pools drift on; read only while drawing, so it redraws the body without recomposing
-    val drift = rememberInfiniteTransition(label = "attachmentDrift").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(DRIFT_MS, easing = LinearEasing)),
-        label = "attachmentDriftPhase",
-    )
     val settled by remember { derivedStateOf { presence.value > 0.99f && latestCollapse() <= 0.02f } }
+    // Slow loop the light pools drift on, read only while drawing so it redraws the body without recomposing.
+    // Runs only while the attachment is fully shown; it pauses where it is while fading or collapsing
+    val drift = remember { Animatable(0f) }
+    LaunchedEffect(settled, glowColor != null) {
+        if (!settled || glowColor == null) return@LaunchedEffect
+        while (true) {
+            drift.animateTo(1f, tween((DRIFT_MS * (1f - drift.value)).roundToInt(), easing = LinearEasing))
+            drift.snapTo(0f)
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier
@@ -120,7 +122,7 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f)),
         ) {
-            // Body: the media player's translucent container lit from the top (the edge glow, mirrored to the top),
+            // Body: the media player's translucent container lit from the top by the drifting edge glow,
             // blurred on its own layer so its edges feather out instead of ending in a hard rim (Android 12+)
             Box(
                 Modifier
@@ -128,7 +130,7 @@ fun IslandAttachmentSlot(
                     .blur(EDGE_BLUR, BlurredEdgeTreatment.Unbounded)
                     .clip(shape)
                     .translucentMediaSurface()
-                    .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it, drift.value) } } }
+                    .then(if (glowColor != null) Modifier.edgeGlow(glowColor) { drift.value } else Modifier)
                     .islandOutline(outlineColor, outlineThickness, shape),
             )
             // Content stays sharp, clipped to the body's shape
@@ -165,39 +167,36 @@ private val LightPools = listOf(
 )
 
 /**
- * Light along one edge across the full width, drawn for the bottom edge: a faint wash of [color] fading away from the
- * edge, under pools of the accent in a few tones that drift slowly along it as [drift] runs from 0 to 1, so the
- * colour keeps shifting where they overlap. Mirror the scope for the top.
+ * Light along the top edge across the full width: a faint wash of [color] fading away from the edge, under pools of
+ * the accent in a few tones that drift slowly along it as [drift] runs from 0 to 1, so the colour keeps shifting where
+ * they overlap. Brushes are built once per size and colour; a frame only moves them.
  */
-private fun DrawScope.drawEdgeGlow(color: Color, drift: Float) {
+private fun Modifier.edgeGlow(color: Color, drift: () -> Float): Modifier = drawWithCache {
     val w = size.width
     val h = size.height
-    if (w <= 0f || h <= 0f) return
-    drawRect(
-        Brush.verticalGradient(
-            0f to Color.Transparent,
-            0.35f to color.copy(alpha = GLOW_ALPHA * 0.1f),
-            0.75f to color.copy(alpha = GLOW_ALPHA * 0.35f),
-            1f to color.copy(alpha = GLOW_ALPHA * 0.6f),
-        ),
+    if (w <= 0f || h <= 0f) return@drawWithCache onDrawBehind {}
+    val wash = Brush.verticalGradient(
+        0f to color.copy(alpha = GLOW_ALPHA * 0.6f),
+        0.25f to color.copy(alpha = GLOW_ALPHA * 0.35f),
+        0.65f to color.copy(alpha = GLOW_ALPHA * 0.1f),
+        1f to Color.Transparent,
     )
-    for (pool in LightPools) {
+    val pools = LightPools.map { pool ->
         val tone = if (pool.tint >= 0f) lerp(color, Color.White, pool.tint) else lerp(color, Color.Black, -pool.tint)
-        val x = w * (0.5f + 0.36f * sin(2f * PI.toFloat() * (drift * pool.turns + pool.phase)))
         val radius = w * pool.width
-        val center = Offset(x, h)
-        // Wide and flat: each pool spreads along the edge more than it climbs
-        scale(scaleX = 1f, scaleY = (h * 0.9f) / radius, pivot = center) {
-            drawCircle(
-                Brush.radialGradient(
-                    0f to tone.copy(alpha = POOL_ALPHA),
-                    1f to Color.Transparent,
-                    center = center,
-                    radius = radius,
-                ),
-                radius = radius,
-                center = center,
-            )
+        Triple(pool, radius, Brush.radialGradient(0f to tone.copy(alpha = POOL_ALPHA), 1f to Color.Transparent, center = Offset.Zero, radius = radius))
+    }
+    onDrawBehind {
+        drawRect(wash)
+        val d = drift()
+        for ((pool, radius, brush) in pools) {
+            val x = w * (0.5f + 0.36f * sin(2f * PI.toFloat() * (d * pool.turns + pool.phase)))
+            // Wide and flat: each pool spreads along the edge more than it climbs
+            translate(left = x) {
+                scale(scaleX = 1f, scaleY = (h * 0.9f) / radius, pivot = Offset.Zero) {
+                    drawCircle(brush, radius = radius, center = Offset.Zero)
+                }
+            }
         }
     }
 }
