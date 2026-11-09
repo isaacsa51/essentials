@@ -1,7 +1,6 @@
 package com.sameerasw.essentials.island.ui
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.sameerasw.essentials.island.model.IslandAttachment
+import com.sameerasw.island.media.ui.translucentMediaSurface
 import kotlin.math.roundToInt
 
 /**
@@ -105,8 +105,8 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                // Black body for the lyrics' contrast, lit from the top (the edge glow, mirrored to the top)
-                .background(Color.Black)
+                // The media player's translucent container, lit from the top (the edge glow, mirrored to the top)
+                .translucentMediaSurface()
                 .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it) } } }
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
