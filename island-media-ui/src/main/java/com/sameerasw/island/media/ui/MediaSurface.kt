@@ -183,12 +183,12 @@ private fun mediaSurfacePaint(gradient: MediaSurfaceGradient) = Paint(Paint.ANTI
 
 /**
  * The translucent media surface (the layered player's Translucent container) for shapes beside the card, such as the
- * lyrics attachment: the same black radial transparency gradient, opaque at this element's centre and reaching its
- * half-transparent edge stop at every edge.
+ * lyrics attachment: the same black radial transparency gradient, opaque at the top centre and reaching its
+ * half-transparent edge stop at this element's sides and bottom.
  */
 fun Modifier.translucentMediaSurface(): Modifier = drawBehind {
     if (size.width <= 0f || size.height <= 0f) return@drawBehind
     val stops = floatArrayOf(0.05f, 0.25f, 0.45f, 0.65f, 0.85f, 1f)
-    val paint = mediaSurfacePaint(MediaSurfaceGradient(Offset(size.width / 2f, size.height / 2f), size.width / 2f, size.height / 2f, stops))
+    val paint = mediaSurfacePaint(MediaSurfaceGradient(Offset(size.width / 2f, 0f), size.width / 2f, size.height, stops))
     drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
 }
