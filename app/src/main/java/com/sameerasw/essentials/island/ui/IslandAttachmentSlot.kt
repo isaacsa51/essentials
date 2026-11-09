@@ -1,6 +1,7 @@
 package com.sameerasw.essentials.island.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -104,7 +105,8 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                // Transparent body: only the light falling from the top is painted (the edge glow, mirrored to the top)
+                // Black body for the lyrics' contrast, lit from the top (the edge glow, mirrored to the top)
+                .background(Color.Black)
                 .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it) } } }
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
