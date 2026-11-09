@@ -25,6 +25,11 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 import com.sameerasw.essentials.island.model.IslandAttachment
 import kotlin.math.roundToInt
 
@@ -99,8 +104,8 @@ fun IslandAttachmentSlot(
                 }
                 .liquid(body, TransformOrigin(0.5f, 0f))
                 .clip(shape)
-                // Transparent body: only the light from the top is painted
-                .drawBehind { glowColor?.let { drawTopGlow(it) } }
+                // Transparent body: only the light falling from the top is painted (the edge glow, mirrored to the top)
+                .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it) } } }
                 .islandOutline(outlineColor, outlineThickness, shape),
         ) {
             current.content(widthPx, settled)
@@ -108,20 +113,53 @@ fun IslandAttachmentSlot(
     }
 }
 
-// Strength of the light along the top edge, and how far down it reaches as a fraction of the body height
-private const val GLOW_ALPHA = 0.38f
-private const val GLOW_DEPTH = 0.9f
+// Strength of the light at the bottom edge, of the bloom in the middle, and of the bright line near the bottom
+private const val GLOW_ALPHA = 0.5f
+private const val BLOOM_ALPHA = 0.3f
+private const val LINE_ALPHA = 0.8f
 
-/** A soft light falling from the top edge across the full width: [color] fading down to transparent. */
-private fun DrawScope.drawTopGlow(color: Color) {
-    if (size.width <= 0f || size.height <= 0f) return
+/**
+ * Light along one edge across the full width, drawn for the bottom edge: [color] strongest at the edge fading to
+ * transparent, a wide soft bloom at its centre, and a thin bright line just inside it. Mirror the scope for the top.
+ */
+private fun DrawScope.drawEdgeGlow(color: Color) {
+    val w = size.width
+    val h = size.height
+    if (w <= 0f || h <= 0f) return
     drawRect(
         Brush.verticalGradient(
-            0f to color.copy(alpha = GLOW_ALPHA),
-            0.4f to color.copy(alpha = GLOW_ALPHA * 0.45f),
-            1f to Color.Transparent,
-            startY = 0f,
-            endY = size.height * GLOW_DEPTH,
+            0f to Color.Transparent,
+            0.35f to color.copy(alpha = GLOW_ALPHA * 0.15f),
+            0.75f to color.copy(alpha = GLOW_ALPHA * 0.55f),
+            1f to color.copy(alpha = GLOW_ALPHA),
         ),
+    )
+    // Wide and flat: the bloom spreads along the bottom more than it climbs
+    val bloom = w * 0.6f
+    scale(scaleX = 1f, scaleY = (h * 0.9f) / bloom, pivot = Offset(w / 2f, h)) {
+        drawCircle(
+            Brush.radialGradient(
+                0f to color.copy(alpha = BLOOM_ALPHA),
+                1f to Color.Transparent,
+                center = Offset(w / 2f, h),
+                radius = bloom,
+            ),
+            radius = bloom,
+            center = Offset(w / 2f, h),
+        )
+    }
+    // Thin horizon line, lighter than the glow and fading out towards the sides
+    val lineY = h - 3.dp.toPx()
+    val lineColor = lerp(color, Color.White, 0.5f)
+    drawRect(
+        Brush.horizontalGradient(
+            0f to Color.Transparent,
+            0.5f to lineColor.copy(alpha = LINE_ALPHA),
+            1f to Color.Transparent,
+            startX = w * 0.15f,
+            endX = w * 0.85f,
+        ),
+        topLeft = Offset(w * 0.15f, lineY - 0.75.dp.toPx()),
+        size = Size(w * 0.7f, 1.5.dp.toPx()),
     )
 }
