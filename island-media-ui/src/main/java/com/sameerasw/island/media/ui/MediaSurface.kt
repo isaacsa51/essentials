@@ -166,18 +166,11 @@ internal fun MediaTopShade(state: MediaPlayerState, modifier: Modifier) {
     })
 }
 
-private val SurfaceColors =
-    intArrayOf(0xFF000000.toInt(), 0xF2000000.toInt(), 0xE6000000.toInt(), 0xCC000000.toInt(), 0x8C000000.toInt(), 0x80000000.toInt())
-
-// Same ramp, but fading out completely at the edge: for shapes that should dissolve rather than end at half black
-private val FadeOutColors =
-    intArrayOf(0xFF000000.toInt(), 0xF2000000.toInt(), 0xE6000000.toInt(), 0xCC000000.toInt(), 0x66000000, 0x00000000)
-
 /** The surface's black radial transparency gradient: opaque at [gradient]'s centre, half transparent at its edge. */
-private fun mediaSurfacePaint(gradient: MediaSurfaceGradient, colors: IntArray = SurfaceColors) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+private fun mediaSurfacePaint(gradient: MediaSurfaceGradient) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     shader = RadialGradient(
         0f, 0f, 1f,
-        colors,
+        intArrayOf(0xFF000000.toInt(), 0xF2000000.toInt(), 0xE6000000.toInt(), 0xCC000000.toInt(), 0x8C000000.toInt(), 0x80000000.toInt()),
         gradient.stops,
         Shader.TileMode.CLAMP,
     ).apply {
@@ -190,15 +183,12 @@ private fun mediaSurfacePaint(gradient: MediaSurfaceGradient, colors: IntArray =
 
 /**
  * The translucent media surface (the layered player's Translucent container) for shapes beside the card, such as the
- * lyrics attachment: the same black radial transparency gradient, opaque at this element's centre and fading out
- * completely at every edge, so the shape dissolves instead of ending in a visible rim.
+ * lyrics attachment: the same black radial transparency gradient, opaque at this element's centre and reaching its
+ * half-transparent edge stop at every edge.
  */
 fun Modifier.translucentMediaSurface(): Modifier = drawBehind {
     if (size.width <= 0f || size.height <= 0f) return@drawBehind
     val stops = floatArrayOf(0.05f, 0.25f, 0.45f, 0.65f, 0.85f, 1f)
-    val paint = mediaSurfacePaint(
-        MediaSurfaceGradient(Offset(size.width / 2f, size.height / 2f), size.width / 2f, size.height / 2f, stops),
-        FadeOutColors,
-    )
+    val paint = mediaSurfacePaint(MediaSurfaceGradient(Offset(size.width / 2f, size.height / 2f), size.width / 2f, size.height / 2f, stops))
     drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
 }
