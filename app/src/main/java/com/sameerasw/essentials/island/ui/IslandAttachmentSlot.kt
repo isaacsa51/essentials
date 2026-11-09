@@ -145,7 +145,7 @@ private const val GLOW_ALPHA = 0.5f
 private const val POOL_ALPHA = 0.32f
 
 // One full loop of the drift; every pool's speed is a whole number of turns per loop, so the loop has no seam
-private const val DRIFT_MS = 14_000
+private const val DRIFT_MS = 20_000
 
 /**
  * A pool of light drifting along the edge.
@@ -161,6 +161,7 @@ private val LightPools = listOf(
     LightPool(tint = 0f, turns = 1, phase = 0f, width = 0.42f),
     LightPool(tint = 0.35f, turns = -2, phase = 0.33f, width = 0.32f),
     LightPool(tint = -0.3f, turns = 1, phase = 0.66f, width = 0.38f),
+    LightPool(tint = 0.15f, turns = -1, phase = 0.5f, width = 0.36f),
 )
 
 /**
