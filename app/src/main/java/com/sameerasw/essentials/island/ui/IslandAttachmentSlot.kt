@@ -13,6 +13,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.layout
@@ -26,9 +28,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.sameerasw.essentials.island.model.IslandAttachment
 import com.sameerasw.island.media.ui.translucentMediaSurface
@@ -103,26 +103,35 @@ fun IslandAttachmentSlot(
                     heightPx = it.height
                     onSizeChanged(it)
                 }
-                .liquid(body, TransformOrigin(0.5f, 0f))
-                .clip(shape)
-                // The media player's translucent container, lit from the top (the edge glow, mirrored to the top)
-                .translucentMediaSurface()
-                .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it) } } }
-                .islandOutline(outlineColor, outlineThickness, shape),
+                .liquid(body, TransformOrigin(0.5f, 0f)),
         ) {
-            current.content(widthPx, settled)
+            // Body: the media player's translucent container lit from the top (the edge glow, mirrored to the top),
+            // blurred on its own layer so its edges feather out instead of ending in a hard rim (Android 12+)
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .blur(EDGE_BLUR, BlurredEdgeTreatment.Unbounded)
+                    .clip(shape)
+                    .translucentMediaSurface()
+                    .drawBehind { glowColor?.let { scale(scaleX = 1f, scaleY = -1f) { drawEdgeGlow(it) } } }
+                    .islandOutline(outlineColor, outlineThickness, shape),
+            )
+            // Content stays sharp, clipped to the body's shape
+            Box(Modifier.clip(shape)) {
+                current.content(widthPx, settled)
+            }
         }
     }
 }
 
-// Strength of the light at the bottom edge, of the bloom in the middle, and of the bright line near the bottom
+// How far the body's edges feather out, and the strength of the light at the edge and of the bloom in the middle
+private val EDGE_BLUR = 10.dp
 private const val GLOW_ALPHA = 0.5f
 private const val BLOOM_ALPHA = 0.3f
-private const val LINE_ALPHA = 0.8f
 
 /**
  * Light along one edge across the full width, drawn for the bottom edge: [color] strongest at the edge fading to
- * transparent, a wide soft bloom at its centre, and a thin bright line just inside it. Mirror the scope for the top.
+ * transparent, with a wide soft bloom at its centre. Mirror the scope for the top.
  */
 private fun DrawScope.drawEdgeGlow(color: Color) {
     val w = size.width
@@ -150,18 +159,4 @@ private fun DrawScope.drawEdgeGlow(color: Color) {
             center = Offset(w / 2f, h),
         )
     }
-    // Thin horizon line, lighter than the glow and fading out towards the sides
-    val lineY = h - 3.dp.toPx()
-    val lineColor = lerp(color, Color.White, 0.5f)
-    drawRect(
-        Brush.horizontalGradient(
-            0f to Color.Transparent,
-            0.5f to lineColor.copy(alpha = LINE_ALPHA),
-            1f to Color.Transparent,
-            startX = w * 0.15f,
-            endX = w * 0.85f,
-        ),
-        topLeft = Offset(w * 0.15f, lineY - 0.75.dp.toPx()),
-        size = Size(w * 0.7f, 1.5.dp.toPx()),
-    )
 }
