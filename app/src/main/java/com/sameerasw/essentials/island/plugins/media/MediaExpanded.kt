@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Offset
@@ -86,8 +87,9 @@ fun MediaExpanded(
     val motion = rememberIslandSurfaceMotion(renderer.usesLayeredSurface)
     val pulse = LocalIslandPulse.current
     val state = MediaPlayerState(
-        title, artist, image, colors?.primary ?: accent, playing, liked, appIcon, canSkipBack, canSkipForward, style,
-        onAccent = colors?.onPrimary ?: Color.Black,
+        // Same art accent as the compact island and the lyrics box; the tonal scheme only styles the text
+        title, artist, image, accent, playing, liked, appIcon, canSkipBack, canSkipForward, style,
+        onAccent = if (colors != null && accent.luminance() < 0.4f) Color.White else Color.Black,
         surface = MediaPlayerSurface(scope.spec.expandedCorner, pulse, !DeviceUtils.isPowerSaveMode(context), scope.spec.surfaceTop,
             camera = { with(density) {
                 val width = scope.spec.expandedWidth.toPx()
