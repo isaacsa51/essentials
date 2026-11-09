@@ -933,26 +933,6 @@ object FeatureRegistry {
                             "island_media_layered_particles",
                         ),
                         SearchSetting(
-                            R.string.island_media_layered_translucent_title,
-                            R.string.island_media_layered_translucent_desc,
-                            "island_media_layered_translucent",
-                        ),
-                        SearchSetting(
-                            R.string.island_media_blur_background_title,
-                            R.string.duo_show_media_title,
-                            "island_media_blur_background",
-                        ),
-                        SearchSetting(
-                            R.string.island_media_blur_source_title,
-                            R.string.duo_show_media_title,
-                            "island_media_blur_source",
-                        ),
-                        SearchSetting(
-                            R.string.island_media_blur_saturation_title,
-                            R.string.duo_show_media_title,
-                            "island_media_blur_saturation",
-                        ),
-                        SearchSetting(
                             R.string.island_show_on_update_title,
                             R.string.island_providers_title,
                             "island_provider_show_on_update",

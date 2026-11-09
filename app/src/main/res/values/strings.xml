@@ -3653,11 +3653,6 @@
     <string name="island_media_use_art_color_title">Advertise album art color</string>
     <string name="island_media_layered_particles_title">Particles</string>
     <string name="island_media_layered_particles_desc">Show the particle field around the player while the island pulses</string>
-    <string name="island_media_layered_translucent_title">Translucent container</string>
-    <string name="island_media_layered_translucent_desc">Let what is behind the island show through the player. Off keeps it opaque</string>
-    <string name="island_media_blur_background_title">Blurred artwork background</string>
-    <string name="island_media_blur_source_title">Blur source size</string>
-    <string name="island_media_blur_saturation_title">Blur saturation</string>
     <string name="island_media_player_style_title">Player style</string>
     <!-- Widget stack -->
     <string name="widget_stack_label">Widget stack</string>

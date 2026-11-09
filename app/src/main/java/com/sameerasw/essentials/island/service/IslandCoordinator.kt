@@ -136,7 +136,8 @@ class IslandCoordinator(
         items.forEach {
             val group = it.priorityGroup ?: pluginId
             it.userPriority = userPriorities[group]
-            it.inBubble = group in bubbleGroups
+            // The media bubble setting wins over marking media for the secondary bubble
+            it.inBubble = group in bubbleGroups && !(group == "media" && settings.isIslandMediaBubbleEnabled())
         }
         controller.setItems(pluginId, items)
     }

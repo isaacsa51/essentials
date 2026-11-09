@@ -64,7 +64,6 @@ import androidx.compose.material3.Button
 import android.widget.Toast
 import com.sameerasw.essentials.FeatureSettingsActivity
 import com.sameerasw.essentials.R
-import com.sameerasw.essentials.island.ui.components.ArtworkBlur
 import com.sameerasw.essentials.ui.components.sliders.ConfigSliderItem
 import kotlin.math.roundToInt
 import com.sameerasw.essentials.ui.core.cards.FeatureCard
@@ -280,7 +279,7 @@ fun IslandSettingsUI(
             spacing = 2.dp,
             cornerRadius = 24.dp,
         ) {
-            val bubbleIds = if (reorderMode) workingBubble else savedBubble
+            val bubbleIds = (if (reorderMode) workingBubble else savedBubble).let { if (viewModel.isIslandMediaBubble.value) it - "media" else it }
             val bubbleNote = stringResource(R.string.island_bubble_item_shown)
             val renderEntry: @Composable (String, (@Composable () -> Unit)?) -> Unit = { entryId, handle ->
                 when (entryId) {
@@ -593,7 +592,9 @@ fun IslandSettingsUI(
                             if (reorderMode) {
                                 {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (entryId != "notifications" && IslandPriorityEntries.all.any { it.id == entryId }) {
+                                        // Media shown as its own bubble already sits apart from the island
+                                        val mediaAsBubble = entryId == "media" && viewModel.isIslandMediaBubble.value
+                                        if (entryId != "notifications" && !mediaAsBubble && IslandPriorityEntries.all.any { it.id == entryId }) {
                                             val inBubble = entryId in workingBubble
                                             IconToggleButton(
                                                 checked = inBubble,
@@ -950,50 +951,6 @@ fun IslandSettingsUI(
                             },
                             modifier = Modifier.highlight(highlightSetting == "island_media_layered_particles"),
                         )
-                        IconToggleItem(
-                            iconRes = R.drawable.rounded_blur_linear_24,
-                            title = stringResource(R.string.island_media_layered_translucent_title),
-                            description = stringResource(R.string.island_media_layered_translucent_desc),
-                            isChecked = viewModel.isIslandMediaLayeredTranslucent.value,
-                            onCheckedChange = { checked ->
-                                HapticUtil.performVirtualKeyHaptic(view)
-                                viewModel.setIslandMediaLayeredTranslucent(checked)
-                            },
-                            modifier = Modifier.highlight(highlightSetting == "island_media_layered_translucent"),
-                        )
-                        val artworkBackground = viewModel.isIslandMediaLayeredArtwork.value
-                        IconToggleItem(
-                            iconRes = R.drawable.rounded_blur_on_24,
-                            title = stringResource(R.string.island_media_blur_background_title),
-                            isChecked = artworkBackground,
-                            onCheckedChange = { checked ->
-                                HapticUtil.performVirtualKeyHaptic(view)
-                                viewModel.setIslandMediaLayeredArtwork(checked)
-                            },
-                            modifier = Modifier.highlight(highlightSetting == "island_media_blur_background"),
-                        )
-                        if (artworkBackground) {
-                            ConfigSliderItem(
-                                title = stringResource(R.string.island_media_blur_source_title),
-                                value = viewModel.islandMediaBlurSourceWidth.intValue.toFloat(),
-                                onValueChange = { viewModel.setIslandMediaBlurSourceWidth(it.roundToInt()) },
-                                valueRange = ArtworkBlur.SOURCE_WIDTH_RANGE,
-                                increment = 8f,
-                                valueFormatter = { "${it.roundToInt()} px" },
-                                iconRes = R.drawable.rounded_image_24,
-                                modifier = Modifier.highlight(highlightSetting == "island_media_blur_source"),
-                            )
-                            ConfigSliderItem(
-                                title = stringResource(R.string.island_media_blur_saturation_title),
-                                value = viewModel.islandMediaBlurSaturation.floatValue,
-                                onValueChange = { viewModel.setIslandMediaBlurSaturation(it) },
-                                valueRange = ArtworkBlur.SATURATION_RANGE,
-                                increment = 0.05f,
-                                valueFormatter = { "%.2f×".format(it) },
-                                iconRes = R.drawable.rounded_palette_24,
-                                modifier = Modifier.highlight(highlightSetting == "island_media_blur_saturation"),
-                            )
-                        }
                     }
                     if (viewModel.isIslandSecondaryBubble.value &&
                         viewModel.islandNotifQueueStyle.value == SettingsRepository.ISLAND_NOTIF_QUEUE_STYLE_OVERLAP

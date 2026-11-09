@@ -36,7 +36,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.sameerasw.essentials.island.gestures.IslandSlideFeedback
 import com.sameerasw.essentials.island.gestures.SlideFeedback
-import com.sameerasw.essentials.island.ui.components.ArtworkBlur
 import com.sameerasw.essentials.island.ui.components.EqualizerBars
 import com.sameerasw.essentials.island.ui.components.MediaArtCue
 import com.sameerasw.essentials.island.ui.components.TrackSkipPill
@@ -59,11 +58,7 @@ class MediaPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_MEDIA_SHOW_LIKE,
         SettingsRepository.KEY_ISLAND_MEDIA_USE_ART_COLOR,
         SettingsRepository.KEY_ISLAND_MEDIA_PLAYER_STYLE,
-        SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH,
-        SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION,
         SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PARTICLES,
-        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT,
-        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_ARTWORK,
         SettingsRepository.KEY_ISLAND_MEDIA_BUBBLE,
         SettingsRepository.KEY_ISLAND_MEDIA_BUBBLE_WIDE,
         SettingsRepository.KEY_ISLAND_MEDIA_BUBBLE_FILL_ART,
@@ -255,14 +250,7 @@ class MediaPlugin : BaseIslandPlugin() {
         // Layered player: translucent surface, particles, progressive pulse blur
         val renderer = LayeredMediaPlayerRenderer(
             particles = settings.isIslandMediaLayeredParticlesEnabled(),
-            translucent = settings.isIslandMediaLayeredTranslucentEnabled(),
         )
-        val showArtwork = settings.isIslandMediaLayeredArtworkEnabled()
-        val backdrop = if (showArtwork) {
-            ArtworkBlur(settings.getIslandMediaBlurSourceWidth(), settings.getIslandMediaBlurSaturation())
-        } else {
-            null
-        }
         val isPlaying = playing
         val isLiked = liked
         val canSkipBack = supportsAction(controller, PlaybackState.ACTION_SKIP_TO_PREVIOUS)
@@ -304,7 +292,7 @@ class MediaPlugin : BaseIslandPlugin() {
                     endSlot = { EqualizerBars(isPlaying, mediaAccent(artAccent)) },
                 ),
                 expanded = ExpandedContent { scope ->
-                    MediaExpanded(t.title, t.artist, t.artwork, mediaAccent(t.accent?.let { Color(it) }), isPlaying, isLiked, actions, scope, canSkipBack = canSkipBack, canSkipForward = canSkipForward, packageName = t.packageName, style = playerStyle, backdrop = backdrop,
+                    MediaExpanded(t.title, t.artist, t.artwork, mediaAccent(t.accent?.let { Color(it) }), isPlaying, isLiked, actions, scope, canSkipBack = canSkipBack, canSkipForward = canSkipForward, packageName = t.packageName, style = playerStyle, backdrop = null,
                         renderer = renderer)
                 },
                 accent = artAccent,

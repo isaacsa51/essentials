@@ -761,11 +761,7 @@ class SettingsRepository(
         const val KEY_ISLAND_MEDIA_KEEP_WHEN_PAUSED = "island_media_keep_when_paused"
         const val KEY_ISLAND_MEDIA_SHOW_PREVIOUS = "island_media_show_previous"
         const val KEY_ISLAND_MEDIA_USE_ART_COLOR = "island_media_use_art_color"
-        const val KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH = "island_media_blur_source_width"
-        const val KEY_ISLAND_MEDIA_BLUR_SATURATION = "island_media_blur_saturation"
         const val KEY_ISLAND_MEDIA_LAYERED_PARTICLES = "island_media_layered_particles"
-        const val KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT = "island_media_layered_translucent"
-        const val KEY_ISLAND_MEDIA_LAYERED_ARTWORK = "island_media_layered_artwork"
         const val KEY_ISLAND_MEDIA_BUBBLE = "island_media_bubble"
         const val KEY_ISLAND_MEDIA_BUBBLE_WIDE = "island_media_bubble_wide"
         const val KEY_ISLAND_MEDIA_BUBBLE_FILL_ART = "island_media_bubble_fill_art"
@@ -4625,25 +4621,10 @@ class SettingsRepository(
 
     fun setIslandMediaUseArtColorEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_USE_ART_COLOR, enabled)
 
-    fun getIslandMediaBlurSourceWidth(): Int = getInt(KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH, 96)
-
-    fun setIslandMediaBlurSourceWidth(width: Int) = putInt(KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH, width)
-
-    fun getIslandMediaBlurSaturation(): Float = getFloat(KEY_ISLAND_MEDIA_BLUR_SATURATION, 1.35f)
-
-    fun setIslandMediaBlurSaturation(saturation: Float) = putFloat(KEY_ISLAND_MEDIA_BLUR_SATURATION, saturation)
-
     fun isIslandMediaLayeredParticlesEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_PARTICLES, true)
 
     fun setIslandMediaLayeredParticlesEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_PARTICLES, enabled)
 
-    fun isIslandMediaLayeredTranslucentEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT, true)
-
-    fun setIslandMediaLayeredTranslucentEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT, enabled)
-
-    fun isIslandMediaLayeredArtworkEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_LAYERED_ARTWORK, false)
-
-    fun setIslandMediaLayeredArtworkEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_LAYERED_ARTWORK, enabled)
     fun isIslandMediaBubbleEnabled(): Boolean = getBoolean(KEY_ISLAND_MEDIA_BUBBLE, false)
 
     fun setIslandMediaBubbleEnabled(enabled: Boolean) = putBoolean(KEY_ISLAND_MEDIA_BUBBLE, enabled)
