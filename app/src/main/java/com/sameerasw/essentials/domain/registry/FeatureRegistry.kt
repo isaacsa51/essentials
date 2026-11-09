@@ -928,11 +928,6 @@ object FeatureRegistry {
                             "island_media_show_like",
                         ),
                         SearchSetting(
-                            R.string.island_media_layered_player_title,
-                            R.string.island_media_layered_player_desc,
-                            "island_media_layered_player",
-                        ),
-                        SearchSetting(
                             R.string.island_media_layered_particles_title,
                             R.string.island_media_layered_particles_desc,
                             "island_media_layered_particles",

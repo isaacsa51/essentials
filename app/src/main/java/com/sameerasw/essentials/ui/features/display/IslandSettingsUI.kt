@@ -940,51 +940,35 @@ fun IslandSettingsUI(
                             modifier = Modifier.highlight(highlightSetting == "island_media_use_art_color"),
                         )
                         IconToggleItem(
-                            iconRes = R.drawable.rounded_auto_awesome_24,
-                            title = stringResource(R.string.island_media_layered_player_title),
-                            description = stringResource(R.string.island_media_layered_player_desc),
-                            isChecked = viewModel.isIslandMediaLayeredPlayer.value,
+                            iconRes = R.drawable.rounded_bubble_chart_24,
+                            title = stringResource(R.string.island_media_layered_particles_title),
+                            description = stringResource(R.string.island_media_layered_particles_desc),
+                            isChecked = viewModel.isIslandMediaLayeredParticles.value,
                             onCheckedChange = { checked ->
                                 HapticUtil.performVirtualKeyHaptic(view)
-                                viewModel.setIslandMediaLayeredPlayer(checked)
+                                viewModel.setIslandMediaLayeredParticles(checked)
                             },
-                            modifier = Modifier.highlight(highlightSetting == "island_media_layered_player"),
+                            modifier = Modifier.highlight(highlightSetting == "island_media_layered_particles"),
                         )
-                        val layeredPlayer = viewModel.isIslandMediaLayeredPlayer.value
-                        if (layeredPlayer) {
-                            IconToggleItem(
-                                iconRes = R.drawable.rounded_bubble_chart_24,
-                                title = stringResource(R.string.island_media_layered_particles_title),
-                                description = stringResource(R.string.island_media_layered_particles_desc),
-                                isChecked = viewModel.isIslandMediaLayeredParticles.value,
-                                onCheckedChange = { checked ->
-                                    HapticUtil.performVirtualKeyHaptic(view)
-                                    viewModel.setIslandMediaLayeredParticles(checked)
-                                },
-                                modifier = Modifier.highlight(highlightSetting == "island_media_layered_particles"),
-                            )
-                            IconToggleItem(
-                                iconRes = R.drawable.rounded_blur_linear_24,
-                                title = stringResource(R.string.island_media_layered_translucent_title),
-                                description = stringResource(R.string.island_media_layered_translucent_desc),
-                                isChecked = viewModel.isIslandMediaLayeredTranslucent.value,
-                                onCheckedChange = { checked ->
-                                    HapticUtil.performVirtualKeyHaptic(view)
-                                    viewModel.setIslandMediaLayeredTranslucent(checked)
-                                },
-                                modifier = Modifier.highlight(highlightSetting == "island_media_layered_translucent"),
-                            )
-                        }
-                        // Each player keeps its own artwork background choice; the blur sliders below are shared
-                        val artworkBackground =
-                            if (layeredPlayer) viewModel.isIslandMediaLayeredArtwork.value else viewModel.isIslandMediaBlurBackground.value
+                        IconToggleItem(
+                            iconRes = R.drawable.rounded_blur_linear_24,
+                            title = stringResource(R.string.island_media_layered_translucent_title),
+                            description = stringResource(R.string.island_media_layered_translucent_desc),
+                            isChecked = viewModel.isIslandMediaLayeredTranslucent.value,
+                            onCheckedChange = { checked ->
+                                HapticUtil.performVirtualKeyHaptic(view)
+                                viewModel.setIslandMediaLayeredTranslucent(checked)
+                            },
+                            modifier = Modifier.highlight(highlightSetting == "island_media_layered_translucent"),
+                        )
+                        val artworkBackground = viewModel.isIslandMediaLayeredArtwork.value
                         IconToggleItem(
                             iconRes = R.drawable.rounded_blur_on_24,
                             title = stringResource(R.string.island_media_blur_background_title),
                             isChecked = artworkBackground,
                             onCheckedChange = { checked ->
                                 HapticUtil.performVirtualKeyHaptic(view)
-                                if (layeredPlayer) viewModel.setIslandMediaLayeredArtwork(checked) else viewModel.setIslandMediaBlurBackground(checked)
+                                viewModel.setIslandMediaLayeredArtwork(checked)
                             },
                             modifier = Modifier.highlight(highlightSetting == "island_media_blur_background"),
                         )

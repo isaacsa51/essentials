@@ -295,10 +295,8 @@ class MainViewModel : ViewModel() {
     val isIslandMediaKeepWhenPaused = mutableStateOf(true)
     val isIslandMediaShowPrevious = mutableStateOf(false)
     val isIslandMediaUseArtColor = mutableStateOf(true)
-    val isIslandMediaBlurBackground = mutableStateOf(true)
     val islandMediaBlurSourceWidth = mutableIntStateOf(96)
     val islandMediaBlurSaturation = mutableFloatStateOf(1.35f)
-    val isIslandMediaLayeredPlayer = mutableStateOf(false)
     val isIslandMediaLayeredParticles = mutableStateOf(true)
     val isIslandMediaLayeredTranslucent = mutableStateOf(true)
     val isIslandMediaLayeredArtwork = mutableStateOf(false)
@@ -999,17 +997,11 @@ class MainViewModel : ViewModel() {
                     SettingsRepository.KEY_ISLAND_MEDIA_USE_ART_COLOR ->
                         isIslandMediaUseArtColor.value = settingsRepository.isIslandMediaUseArtColorEnabled()
 
-                    SettingsRepository.KEY_ISLAND_MEDIA_BLUR_BACKGROUND ->
-                        isIslandMediaBlurBackground.value = settingsRepository.isIslandMediaBlurBackgroundEnabled()
-
                     SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH ->
                         islandMediaBlurSourceWidth.intValue = settingsRepository.getIslandMediaBlurSourceWidth()
 
                     SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION ->
                         islandMediaBlurSaturation.floatValue = settingsRepository.getIslandMediaBlurSaturation()
-
-                    SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER ->
-                        isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
 
                     SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PARTICLES ->
                         isIslandMediaLayeredParticles.value = settingsRepository.isIslandMediaLayeredParticlesEnabled()
@@ -2650,10 +2642,8 @@ class MainViewModel : ViewModel() {
         isIslandMediaKeepWhenPaused.value = settingsRepository.isIslandMediaKeepWhenPausedEnabled()
         isIslandMediaShowPrevious.value = settingsRepository.isIslandMediaShowPreviousEnabled()
         isIslandMediaUseArtColor.value = settingsRepository.isIslandMediaUseArtColorEnabled()
-        isIslandMediaBlurBackground.value = settingsRepository.isIslandMediaBlurBackgroundEnabled()
         islandMediaBlurSourceWidth.intValue = settingsRepository.getIslandMediaBlurSourceWidth()
         islandMediaBlurSaturation.floatValue = settingsRepository.getIslandMediaBlurSaturation()
-        isIslandMediaLayeredPlayer.value = settingsRepository.isIslandMediaLayeredPlayerEnabled()
         isIslandMediaLayeredParticles.value = settingsRepository.isIslandMediaLayeredParticlesEnabled()
         isIslandMediaLayeredTranslucent.value = settingsRepository.isIslandMediaLayeredTranslucentEnabled()
         isIslandMediaLayeredArtwork.value = settingsRepository.isIslandMediaLayeredArtworkEnabled()
@@ -6251,11 +6241,6 @@ class MainViewModel : ViewModel() {
         settingsRepository.setIslandMediaUseArtColorEnabled(enabled)
     }
 
-    fun setIslandMediaBlurBackground(enabled: Boolean) {
-        isIslandMediaBlurBackground.value = enabled
-        settingsRepository.setIslandMediaBlurBackgroundEnabled(enabled)
-    }
-
     fun setIslandMediaBlurSourceWidth(width: Int) {
         islandMediaBlurSourceWidth.intValue = width
         settingsRepository.setIslandMediaBlurSourceWidth(width)
@@ -6264,11 +6249,6 @@ class MainViewModel : ViewModel() {
     fun setIslandMediaBlurSaturation(saturation: Float) {
         islandMediaBlurSaturation.floatValue = saturation
         settingsRepository.setIslandMediaBlurSaturation(saturation)
-    }
-
-    fun setIslandMediaLayeredPlayer(enabled: Boolean) {
-        isIslandMediaLayeredPlayer.value = enabled
-        settingsRepository.setIslandMediaLayeredPlayerEnabled(enabled)
     }
 
     fun setIslandMediaLayeredParticles(enabled: Boolean) {

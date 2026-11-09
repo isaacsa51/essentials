@@ -1,6 +1,5 @@
 package com.sameerasw.essentials.island.plugins.media
 
-import com.sameerasw.island.media.ui.DefaultMediaPlayerRenderer
 import com.sameerasw.island.media.ui.LayeredMediaPlayerRenderer
 import com.sameerasw.essentials.island.model.StackIcon
 import com.sameerasw.essentials.island.model.ExpandedSurfaceStyle
@@ -60,10 +59,8 @@ class MediaPlugin : BaseIslandPlugin() {
         SettingsRepository.KEY_ISLAND_MEDIA_SHOW_LIKE,
         SettingsRepository.KEY_ISLAND_MEDIA_USE_ART_COLOR,
         SettingsRepository.KEY_ISLAND_MEDIA_PLAYER_STYLE,
-        SettingsRepository.KEY_ISLAND_MEDIA_BLUR_BACKGROUND,
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SOURCE_WIDTH,
         SettingsRepository.KEY_ISLAND_MEDIA_BLUR_SATURATION,
-        SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PLAYER,
         SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_PARTICLES,
         SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_TRANSLUCENT,
         SettingsRepository.KEY_ISLAND_MEDIA_LAYERED_ARTWORK,
@@ -255,18 +252,12 @@ class MediaPlugin : BaseIslandPlugin() {
         IslandMediaState.live.value = true
         val artAccent = artAccent(t)
         val playerStyle = MediaPlayerStyle.from(settings.getIslandMediaPlayerStyle())
-        // The layered player (translucent surface, particles, progressive pulse blur) or the original one
-        val layered = settings.isIslandMediaLayeredPlayerEnabled()
-        val renderer = if (layered) {
-            LayeredMediaPlayerRenderer(
-                particles = settings.isIslandMediaLayeredParticlesEnabled(),
-                translucent = settings.isIslandMediaLayeredTranslucentEnabled(),
-            )
-        } else {
-            DefaultMediaPlayerRenderer
-        }
-        // Each player has its own artwork background toggle; the blur sliders are shared
-        val showArtwork = if (layered) settings.isIslandMediaLayeredArtworkEnabled() else settings.isIslandMediaBlurBackgroundEnabled()
+        // Layered player: translucent surface, particles, progressive pulse blur
+        val renderer = LayeredMediaPlayerRenderer(
+            particles = settings.isIslandMediaLayeredParticlesEnabled(),
+            translucent = settings.isIslandMediaLayeredTranslucentEnabled(),
+        )
+        val showArtwork = settings.isIslandMediaLayeredArtworkEnabled()
         val backdrop = if (showArtwork) {
             ArtworkBlur(settings.getIslandMediaBlurSourceWidth(), settings.getIslandMediaBlurSaturation())
         } else {
@@ -289,7 +280,7 @@ class MediaPlugin : BaseIslandPlugin() {
         publish(
             IslandItem(
                 key = ITEM_KEY,
-                expandedSurfaceStyle = if (layered) ExpandedSurfaceStyle.Layered else ExpandedSurfaceStyle.Default,
+                expandedSurfaceStyle = ExpandedSurfaceStyle.Layered,
                 expandedParticles = true,
                 priority = IslandPriority.MEDIA,
                 placement = CompactPlacement.Dynamic,

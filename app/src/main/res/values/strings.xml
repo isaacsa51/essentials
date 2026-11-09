@@ -3651,8 +3651,6 @@
     <string name="whats_new_feature_tags_title">New: Feature tags and what they mean</string>
     <string name="island_media_show_like_title">Show like track button</string>
     <string name="island_media_use_art_color_title">Advertise album art color</string>
-    <string name="island_media_layered_player_title">Layered player</string>
-    <string name="island_media_layered_player_desc">Translucent player with particles and a progressive blur while the island pulses. Uses the pulse shadow setting</string>
     <string name="island_media_layered_particles_title">Particles</string>
     <string name="island_media_layered_particles_desc">Show the particle field around the player while the island pulses</string>
     <string name="island_media_layered_translucent_title">Translucent container</string>
